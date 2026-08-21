@@ -149,13 +149,16 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const [catsRes, notesRes, profileRes] = await Promise.all([
         supabase.from("categories").select("*").order("created_at"),
         supabase.from("notes").select("*").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("brain_name, onboarded").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("brain_name, onboarded, brain_pos_x, brain_pos_y").eq("id", user.id).maybeSingle(),
       ]);
       if (catsRes.data) setCategories(catsRes.data.map(dbToCategory));
       if (notesRes.data) setNotes(notesRes.data.map(dbToNote));
       if (profileRes.data) {
         setBrainNameState(profileRes.data.brain_name || "ExoBrain");
         setOnboardedState(profileRes.data.onboarded ?? false);
+        const bx = (profileRes.data as any).brain_pos_x;
+        const by = (profileRes.data as any).brain_pos_y;
+        setBrainPosState(bx !== null && bx !== undefined && by !== null && by !== undefined ? { x: Number(bx), y: Number(by) } : null);
       }
       setLoading(false);
     };
