@@ -1234,10 +1234,10 @@ const GraphView = () => {
                         : "gap-1.5 px-2.5 py-1 text-[10px] font-medium"
                     } ${isLinkSource ? "ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}`}
                     style={{
-                      borderColor: `hsl(${node.color} / ${isFocused ? 0.52 : isMainNote ? 0.28 : 0.16})`,
+                      borderColor: `hsl(${node.color} / ${isFocused ? 0.52 : isMainNote ? 0.3 : 0.16})`,
                       boxShadow: isFocused
-                        ? `0 5px 18px hsl(${node.color} / 0.18)`
-                        : `0 3px 12px hsl(${node.color} / 0.08)`,
+                        ? `0 5px 18px hsl(${node.color} / 0.3)`
+                        : `0 3px 12px hsl(${node.color} / 0.2)`,
                     }}
                   >
                     <span
