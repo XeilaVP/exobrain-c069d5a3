@@ -63,3 +63,11 @@ Este es el **único** caso de asignación automática:
 5. Arrastrar una madre: cambian ella y sus descendientes por el mismo delta; nada más.
 6. Recargar: todas las posiciones manuales se conservan exactamente.
 7. Confirmar visualmente que el tronco termina en la última intersección raíz y no sobresale.
+
+## Guardado en base de datos (comprobado)
+
+Sí, se guardan en la base de datos, y de hecho ya hay datos: las 65 notas actuales tienen `pos_x` / `pos_y` rellenados (y ninguna usa ya `pos_dx` / `pos_dy`). No hace falta crear nada nuevo ni migrar la estructura; solo falta que la vista lea y escriba esas columnas en vez de recalcular.
+
+Con eso las posiciones sobreviven a recargar, cerrar sesión, cambiar de dispositivo y a la exportación de datos.
+
+Un único hueco real: el historial de versiones (`note_versions`) no guarda `pos_x` / `pos_y`, así que restaurar una versión antigua o recuperar una nota borrada la deja sin posición. Se añaden esas dos columnas al historial y a las funciones de restaurar/recuperar, para que también ahí la posición se conserve. Es la única modificación de base de datos del plan.
