@@ -1256,8 +1256,8 @@ const GraphView = () => {
                   <span
                     className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-card"
                     style={{
-                      width: 6,
-                      height: 6,
+                      width: 12,
+                      height: 12,
                       backgroundColor: `hsl(${visualForRoot(node.branchRootId).start})`,
                       boxShadow: `0 2px 7px hsl(${node.color} / 0.16)`,
                     }}
