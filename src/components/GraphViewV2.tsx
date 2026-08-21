@@ -1127,7 +1127,7 @@ const GraphView = () => {
                 key={`att-${n.id}`}
                 cx={n.x}
                 cy={n.y}
-                r={3}
+                r={10}
                 fill="url(#tree-trunk-gradient)"
                 style={{ opacity: dimFor(n.id), transition: "opacity 260ms ease" }}
               />
