@@ -1538,41 +1538,7 @@ const GraphView = () => {
           )}
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            // Persistir cualquier arrastre en curso antes de "confirmar" visualmente.
-            Object.entries(offsetsRef.current).forEach(([nodeId, off]) => {
-              persistDragged(nodeId, off.dx, off.dy);
-            });
-            toast.success("Disposición guardada");
-          }}
-          className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
-          title="Guardar disposición actual del árbol"
-        >
-          <Save size={16} />
-        </button>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setConfirmDialog({
-              message: "¿Restablecer el árbol al reparto automático? Se perderán todas las posiciones que hayas movido a mano.",
-              onConfirm: () => {
-                setOffsets({});
-                void clearAllPositions();
-                setFocusNoteId(null);
-                fitFullTree();
-                setShowFilterPanel(false);
-                setConfirmDialog(null);
-              },
-            });
-          }}
-          className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
-          title="Restablecer al reparto automático"
-        >
-          <TreePine size={16} />
-        </button>
 
         <button
           onClick={(e) => {
