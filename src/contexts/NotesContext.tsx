@@ -177,11 +177,18 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await supabase.from("profiles").update({ onboarded: v }).eq("id", user.id);
   }, [user]);
 
+  // Posición fija de la base del árbol (ExoBrain). Se guarda una vez y no se recalcula.
+  const setBrainPos = useCallback(async (pos: { x: number; y: number }) => {
+    setBrainPosState(pos);
+    if (!user) return;
+    await supabase.from("profiles").update({ brain_pos_x: pos.x, brain_pos_y: pos.y } as any).eq("id", user.id);
+  }, [user]);
+
 
   // Debounced save for note updates
   const updateTimers = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null) => {
+  const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null, pos?: { x: number; y: number } | null) => {
     if (!user) return null;
     // Child notes inherit parent's category and color
     let catId = categoryId;
@@ -203,6 +210,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       checklist: [],
       linked_note_ids: [],
       note_type: noteType,
+      pos_x: pos ? pos.x : null,
+      pos_y: pos ? pos.y : null,
     }).select().single();
     if (error) { toast.error("Error al crear nota"); return null; }
     const note = dbToNote(data);
