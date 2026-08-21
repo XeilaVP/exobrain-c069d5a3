@@ -20,9 +20,10 @@ No hay layout automático continuo, ni fuerzas, ni reacomodo por hermanas nuevas
 
 Se abandona el modelo "coloco nodos y luego dibujo una curva entre madre e hija". El árbol se construye como **esqueleto de segmentos unidos por bifurcaciones**:
 
-- Tronco vertical, ligeramente irregular, partido en tramos.
-- Cada tramo termina exactamente en un punto de bifurcación y cada rama hija arranca en ese mismo punto, con idénticas coordenadas. El nodo se pinta encima. **Ningún path continuo oculto atraviesa la bifurcación.**
-- Las notas raíz nacen del tronco a distintas alturas, alternando lados.
+- **Tronco perfectamente recto y vertical** (una sola línea, misma X de abajo arriba, sin ondulación ni wobble). Se marca en él los puntos de bifurcación.
+- De ese tronco salen las ramas raíz a **distintas alturas, alternando lado** (izquierda/derecha), cada una arrancando exactamente en su punto del tronco.
+- Cada rama hija arranca en el punto de bifurcación exacto de su madre, con idénticas coordenadas. El nodo se pinta encima. **Ningún path continuo oculto atraviesa la bifurcación.**
+
 - Hijas y siguientes niveles se generan con los mismos motivos, más cortos y finos con la profundidad; copa asimétrica, sin abanicos uniformes ni hijas apiladas en vertical.
 - Todo el árbol se dibuja siempre.
 
