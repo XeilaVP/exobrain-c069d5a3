@@ -867,11 +867,9 @@ const GraphView = () => {
   };
 
   const widthForDepth = (depth: number, isMain = false) => {
-    if (isMain || depth <= 0) return 2;
-    if (depth === 1) return 2;
-    if (depth === 2) return 2;
-    if (depth === 3) return 2;
-    return 1;
+    if (isMain || depth <= 0) return 3;
+    if (depth <= 2) return 2.5;
+    return 2;
   };
 
   // Rama con protagonismo: subárbol de la raíz del nodo enfocado
@@ -1077,7 +1075,7 @@ const GraphView = () => {
             const kind = edge.kind ?? "branch";
             const isTrunk = kind === "trunk";
             const isMain = to.type === "note" && to.isMain;
-            const width = isTrunk ? 2 : widthForDepth(to.depth, isMain);
+            const width = isTrunk ? 3.5 : widthForDepth(to.depth, isMain);
             const z = Math.min(from.z ?? 1, to.z ?? 1);
             const focusDim = isTrunk ? 1 : Math.min(dimFor(edge.from), dimFor(edge.to));
             const isActive = !!focusIds && focusIds.has(edge.to);
