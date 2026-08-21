@@ -1119,6 +1119,22 @@ const GraphView = () => {
             );
           })}
 
+          {/* Punto de unión rama-tronco: suaviza el quiebre en cada intersección. */}
+          {positionsWithOffsets
+            .filter((n) => n.isVirtual && n.id.startsWith("attach-"))
+            .map((n) => (
+              <circle
+                key={`att-${n.id}`}
+                cx={n.x}
+                cy={n.y}
+                r={3}
+                fill="url(#tree-trunk-gradient)"
+                style={{ opacity: dimFor(n.id), transition: "opacity 260ms ease" }}
+              />
+            ))}
+
+
+
           {/* Cross-links stay secondary to the actual hierarchy. */}
           {linkEdges.map((edge, idx) => {
             const from = getPos(edge.from);
