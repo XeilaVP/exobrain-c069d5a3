@@ -139,6 +139,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
   const [brainName, setBrainNameState] = useState<string>("ExoBrain");
   const [onboarded, setOnboardedState] = useState<boolean>(true);
+  const [brainPos, setBrainPosState] = useState<{ x: number; y: number } | null>(null);
 
   // Load data from DB
   useEffect(() => {
