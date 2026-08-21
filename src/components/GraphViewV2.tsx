@@ -211,25 +211,21 @@ const GraphView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNoteId]);
 
-  // V3: straight-line branching tree. The shape comes from node placement;
-  // SVG edges are simple straight segments, like Obsidian, but every root starts
-  // from the shared ExoBrain trunk.
-  // Esqueleto del árbol: geometría AUTOMÁTICA y genérica (ver src/lib/treeGeometry.ts),
-  // válida para cualquier número de raíces/hijas/nietas — nada de posiciones fijadas
-  // a mano por nombre de categoría. Sobre esa base se suma, nota a nota, el
-  // desplazamiento manual persistido (note.posDx/posDy), acumulado a través de toda
-  // la cadena de padres para que arrastrar una nota mueva también a su descendencia
-  // ya guardada. El resultado: automático por defecto, pero cualquier nota se puede
-  // "anclar" a mano y esa posición sobrevive a recargar la página.
-  const { positions, edges, parentMap } = useMemo(() => {
+  // POSICIONES FIJAS.
+  // Cada nota guarda su posición absoluta (note.posX/posY) en la base de datos y
+  // esa posición NO se recalcula nunca: ni al seleccionar, ni al plegar, ni al
+  // hacer zoom, ni al crear o borrar otras notas, ni al cambiar el tamaño de la
+  // ventana. Lo único automático es proponer una posición a una nota que todavía
+  // no tiene ninguna (recién creada o heredada de la versión anterior).
+  const { positions, edges, parentMap, seeds, baseNeedsSave } = useMemo(() => {
     const pos: NodePos[] = [];
     const eds: Edge[] = [];
     const parent: Record<string, string> = {};
-    const W = size.w;
-    const H = size.h;
-    const isMobile = W < 640;
+    const seedList: { id: string; x: number; y: number }[] = [];
 
-    if (rootNotes.length === 0) return { positions: pos, edges: eds, parentMap: parent };
+    if (notes.length === 0) {
+      return { positions: pos, edges: eds, parentMap: parent, seeds: seedList, baseNeedsSave: false };
+    }
 
     const colorForRoot = (rootId: string) => {
       const originalIndex = Math.max(
@@ -239,99 +235,205 @@ const GraphView = () => {
       return TREE_BRANCH_PALETTE[originalIndex % TREE_BRANCH_PALETTE.length].start;
     };
 
-    const skeleton = buildTreeSkeleton(
-      notes.map((n) => ({ id: n.id, parentId: n.parentNoteId ?? null })),
-      {
-        rootX: W / 2,
-        rootY: H - (isMobile ? 96 : 84),
-        compact: isMobile,
-        collapsed: collapsedIds,
-        hiddenRootIds: hiddenCategoryIds,
-      },
-    );
+    const childrenOf = new Map<string | null, Note[]>();
+    notes.forEach((n) => {
+      const key = n.parentNoteId ?? null;
+      const arr = childrenOf.get(key);
+      if (arr) arr.push(n);
+      else childrenOf.set(key, [n]);
+    });
 
-    const posIdFor = (junctionId: string) => {
-      const j = skeleton.junctions.find((x) => x.id === junctionId);
-      if (!j) return junctionId;
-      if (j.id === skeleton.rootJunction.id) return "root";
-      return j.noteId ? `note-${j.noteId}` : j.id;
+    // --- Base del árbol (ExoBrain): posición fija guardada en el perfil. ---
+    const positioned = notes.filter((n) => n.posX != null && n.posY != null);
+    let base = brainPos;
+    let needsBaseSave = false;
+    if (!base) {
+      if (positioned.length > 0) {
+        const xs = positioned.map((n) => Number(n.posX));
+        const ys = positioned.map((n) => Number(n.posY));
+        base = { x: (Math.min(...xs) + Math.max(...xs)) / 2, y: Math.max(...ys) + 130 };
+      } else {
+        base = { x: size.w / 2, y: size.h - 96 };
+      }
+      needsBaseSave = positioned.length > 0;
+    }
+
+    // --- Coordenadas: guardadas o, si faltan, propuestas una sola vez. ---
+    const coord = new Map<string, { x: number; y: number }>();
+    const taken: { x: number; y: number }[] = [];
+    positioned.forEach((n) => {
+      const p = { x: Number(n.posX), y: Number(n.posY) };
+      coord.set(n.id, p);
+      taken.push(p);
+    });
+
+    const farEnough = (p: { x: number; y: number }, min = 62) =>
+      taken.every((t) => Math.hypot(t.x - p.x, t.y - p.y) >= min);
+
+    const seedFor = (note: Note) => {
+      const parentPos = note.parentNoteId ? coord.get(note.parentNoteId) : null;
+      let candidate: { x: number; y: number } | null = null;
+
+      if (!parentPos) {
+        // Raíz nueva: se cuelga del tronco por encima de la última raíz, alternando lado.
+        const rootYs = (childrenOf.get(null) ?? [])
+          .map((r) => coord.get(r.id))
+          .filter(Boolean)
+          .map((p) => p!.y);
+        const topY = rootYs.length ? Math.min(...rootYs) : base!.y - 140;
+        const side = (childrenOf.get(null) ?? []).findIndex((r) => r.id === note.id) % 2 === 0 ? 1 : -1;
+        for (let k = 0; k < 12 && !candidate; k++) {
+          const c = { x: base!.x + side * (150 + k * 24), y: topY - 120 - k * 18 };
+          if (farEnough(c)) candidate = c;
+        }
+        candidate = candidate ?? { x: base!.x + side * 170, y: topY - 130 };
+      } else {
+        // Hija nueva: se propone junto a su madre, siguiendo su dirección de crecimiento.
+        const grandPos = (() => {
+          const p = notes.find((n) => n.id === note.parentNoteId);
+          return p?.parentNoteId ? coord.get(p.parentNoteId) : null;
+        })();
+        const dirX = grandPos ? parentPos.x - grandPos.x : parentPos.x - base!.x;
+        const dirY = grandPos ? parentPos.y - grandPos.y : -120;
+        const baseAngle = Math.atan2(dirY, dirX || 0.001);
+        const siblings = childrenOf.get(note.parentNoteId!) ?? [];
+        const idx = Math.max(0, siblings.findIndex((s) => s.id === note.id));
+        const spread = 0.9;
+        const step = siblings.length > 1 ? spread / (siblings.length - 1) : 0;
+        const offset = siblings.length > 1 ? -spread / 2 + idx * step : 0;
+        for (let k = 0; k < 16 && !candidate; k++) {
+          const a = baseAngle + offset + (k % 2 === 0 ? 1 : -1) * Math.ceil(k / 2) * 0.22;
+          const len = 105 + Math.floor(k / 4) * 26;
+          const c = { x: parentPos.x + Math.cos(a) * len, y: parentPos.y + Math.sin(a) * len };
+          if (farEnough(c)) candidate = c;
+        }
+        candidate = candidate ?? {
+          x: parentPos.x + Math.cos(baseAngle) * 110,
+          y: parentPos.y + Math.sin(baseAngle) * 110,
+        };
+      }
+
+      coord.set(note.id, candidate);
+      taken.push(candidate);
+      seedList.push({ id: note.id, x: candidate.x, y: candidate.y });
+      return candidate;
     };
 
-    // Acumula, en orden padre→hijo (el orden en que `buildTreeSkeleton` genera las
-    // junctions), el desplazamiento manual guardado de cada nota más el de todos
-    // sus ancestros.
-    const savedDeltaByNoteId = new Map<string, { dx: number; dy: number }>();
+    // Sembrar en orden padre→hijo para que las hijas conozcan la posición de su madre.
+    const seedTree = (parentId: string | null) => {
+      (childrenOf.get(parentId) ?? []).forEach((n) => {
+        if (!coord.has(n.id)) seedFor(n);
+        seedTree(n.id);
+      });
+    };
+    seedTree(null);
 
-    skeleton.junctions.forEach((j) => {
-      if (j.id === skeleton.rootJunction.id) {
-        pos.push({
-          id: "root",
-          x: j.x,
-          y: j.y,
-          type: "root",
-          label: brainName || "ExoBrain",
-          color: "220 78% 58%",
-          depth: -1,
-          z: 1,
-        });
-        return;
-      }
+    // --- Qué notas se pintan: raíces ocultas y subárboles plegados quedan fuera. ---
+    const visible = new Set<string>();
+    const depthOf = new Map<string, number>();
+    const branchRootOf = new Map<string, string>();
+    const walk = (note: Note, depth: number, branchRootId: string) => {
+      visible.add(note.id);
+      depthOf.set(note.id, depth);
+      branchRootOf.set(note.id, branchRootId);
+      if (collapsedIds.has(note.id)) return;
+      (childrenOf.get(note.id) ?? []).forEach((c) => walk(c, depth + 1, branchRootId));
+    };
+    (childrenOf.get(null) ?? []).forEach((root) => {
+      if (hiddenCategoryIds.has(root.id)) return;
+      walk(root, 1, root.id);
+    });
 
-      if (!j.noteId) {
-        pos.push({
-          id: j.id,
-          x: j.x,
-          y: j.y,
-          type: "category",
-          label: "",
-          color: "258 74% 68%",
-          depth: -1,
-          isVirtual: true,
-          z: 1,
-        });
-        return;
-      }
+    // --- Tronco recto: de la base hasta la intersección de la raíz más alta. ---
+    const visibleRootList = (childrenOf.get(null) ?? []).filter((r) => visible.has(r.id));
+    const attachments = visibleRootList
+      .map((r) => ({ root: r, y: Math.min(coord.get(r.id)!.y, base!.y - 40) }))
+      .sort((a, b) => b.y - a.y); // de abajo (mayor y) hacia arriba
 
-      const note = notes.find((n) => n.id === j.noteId);
-      if (!note) return;
+    pos.push({
+      id: "root",
+      x: base.x,
+      y: base.y,
+      type: "root",
+      label: brainName || "ExoBrain",
+      color: "220 78% 58%",
+      depth: -1,
+      z: 1,
+    });
 
-      const parentDelta = note.parentNoteId ? savedDeltaByNoteId.get(note.parentNoteId) ?? { dx: 0, dy: 0 } : { dx: 0, dy: 0 };
-      const ownDx = note.posDx ?? 0;
-      const ownDy = note.posDy ?? 0;
-      const totalDelta = { dx: parentDelta.dx + ownDx, dy: parentDelta.dy + ownDy };
-      savedDeltaByNoteId.set(note.id, totalDelta);
+    let prevId = "root";
+    attachments.forEach(({ root, y }) => {
+      const attachId = `attach-${root.id}`;
+      pos.push({
+        id: attachId,
+        x: base!.x,
+        y,
+        type: "category",
+        label: "",
+        color: "258 74% 68%",
+        depth: -1,
+        isVirtual: true,
+        z: 1,
+      });
+      eds.push({ from: prevId, to: attachId, kind: "trunk" });
+      parent[attachId] = prevId;
+      prevId = attachId;
+    });
 
-      const children = notes.filter((n) => n.parentNoteId === note.id);
-      const color = colorForRoot(j.branchRootId ?? note.id);
+    // --- Nodos-nota en sus posiciones fijas + ramas curvas entre madre e hija. ---
+    notes.forEach((note) => {
+      if (!visible.has(note.id)) return;
+      const p = coord.get(note.id)!;
+      const depth = depthOf.get(note.id) ?? 1;
+      const branchRootId = branchRootOf.get(note.id) ?? note.id;
+      const children = childrenOf.get(note.id) ?? [];
       pos.push({
         id: `note-${note.id}`,
-        x: j.x + totalDelta.dx,
-        y: j.y + totalDelta.dy,
+        x: p.x,
+        y: p.y,
         type: "note",
         label: note.title,
-        color,
+        color: colorForRoot(branchRootId),
         categoryId: note.categoryId ?? undefined,
         noteId: note.id,
         parentNoteId: note.parentNoteId,
         noteType: note.noteType,
         hasChildren: children.length > 0,
         isCollapsed: collapsedIds.has(note.id) || children.length === 0,
-        isMain: j.depth === 1,
-        depth: Math.max(0, j.depth - 1),
-        branchRootId: j.branchRootId,
-        z: Math.max(0.6, 1 - Math.max(0, j.depth - 1) * 0.035),
+        isMain: depth === 1,
+        depth: Math.max(0, depth - 1),
+        branchRootId,
+        z: Math.max(0.6, 1 - Math.max(0, depth - 1) * 0.035),
       });
+
+      const fromId = note.parentNoteId ? `note-${note.parentNoteId}` : `attach-${note.id}`;
+      const motif = pickMotif(`${note.id}-${depth}`, depth <= 1 ? 0.09 : 0.16);
+      const mirror = note.id.charCodeAt(0) % 2 === 0;
+      eds.push({ from: fromId, to: `note-${note.id}`, kind: "branch", motif, mirror });
+      parent[`note-${note.id}`] = fromId;
     });
 
-    skeleton.segments.forEach((seg) => {
-      const from = posIdFor(seg.fromJunctionId);
-      const to = posIdFor(seg.toJunctionId);
-      eds.push({ from, to, kind: seg.kind, d: seg.d, motif: seg.motif, mirror: seg.mirror });
-      parent[to] = from;
-    });
+    return { positions: pos, edges: eds, parentMap: parent, seeds: seedList, baseNeedsSave: needsBaseSave };
+  }, [notes, rootNotes, brainName, brainPos, size.w, size.h, collapsedIds, hiddenCategoryIds]);
 
-    return { positions: pos, edges: eds, parentMap: parent };
-  }, [notes, rootNotes, brainName, size.w, size.h, collapsedIds, hiddenCategoryIds]);
+  // Persistencia de la única asignación automática que existe: notas sin posición.
+  const seededRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const pending = seeds.filter((s) => !seededRef.current.has(s.id));
+    if (pending.length === 0) return;
+    pending.forEach((s) => seededRef.current.add(s.id));
+    void saveAbsolutePositions(pending);
+  }, [seeds, saveAbsolutePositions]);
+
+  const baseSavedRef = useRef(false);
+  useEffect(() => {
+    if (!baseNeedsSave || baseSavedRef.current) return;
+    const rootPos = positions.find((p) => p.id === "root");
+    if (!rootPos) return;
+    baseSavedRef.current = true;
+    void setBrainPos({ x: rootPos.x, y: rootPos.y });
+  }, [baseNeedsSave, positions, setBrainPos]);
+
 
   // Apply drag offsets — propagate ancestor offsets to descendants so dragging a
   // node moves its whole subtree along with it.
