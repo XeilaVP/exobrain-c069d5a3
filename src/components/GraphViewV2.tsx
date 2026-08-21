@@ -928,11 +928,9 @@ const GraphView = () => {
   return (
     <div
       ref={containerRef}
-      className="flex-1 h-full w-full overflow-hidden relative select-none"
+      className="flex-1 h-full w-full overflow-hidden relative select-none bg-background"
       style={{
         touchAction: "none",
-        backgroundImage:
-          "radial-gradient(900px 640px at 51% 43%, rgba(255,255,255,0.97), rgba(247,248,252,0.78) 52%, rgba(240,243,248,0.96) 100%), radial-gradient(720px 520px at 16% 28%, rgba(124,106,244,0.055), transparent 72%), radial-gradient(760px 560px at 85% 38%, rgba(83,198,216,0.05), transparent 74%)",
       }}
       onPointerDown={(e) => {
         if (e.button !== 0 && e.pointerType === "mouse") return;
