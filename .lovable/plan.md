@@ -27,3 +27,55 @@ En `src/components/GraphViewV2.tsx`, dentro del cálculo de `attachments`:
 - Altura de anclaje: `yAttach = min(yNota + tan(27°) * |xNota - xTronco|, base.y - 40)`, en vez del actual `min(yNota, base.y - 40)`.
 - Se mantiene el orden de anclajes de abajo hacia arriba y el encadenado de tramos del tronco, de modo que el tronco llegue solo hasta el anclaje superior.
 - Los nodos virtuales `attach-*` pasan a renderizarse como un punto de radio ~3 px con el color/gradiente del tronco (hoy son invisibles).
+
+## Código exacto
+
+### 1. Anclaje inclinado — `src/components/GraphViewV2.tsx` (~línea 348-352)
+
+Actual:
+
+```ts
+// --- Tronco recto: de la base hasta la intersección de la raíz más alta. ---
+const visibleRootList = (childrenOf.get(null) ?? []).filter((r) => visible.has(r.id));
+const attachments = visibleRootList
+  .map((r) => ({ root: r, y: Math.min(coord.get(r.id)!.y, base!.y - 40) }))
+  .sort((a, b) => b.y - a.y); // de abajo (mayor y) hacia arriba
+```
+
+Nuevo:
+
+```ts
+// --- Tronco recto: de la base hasta la intersección de la raíz más alta. ---
+// La rama nace por debajo de su nota para subir ~27° en vez de salir horizontal.
+const BRANCH_RISE = Math.tan((27 * Math.PI) / 180);
+const visibleRootList = (childrenOf.get(null) ?? []).filter((r) => visible.has(r.id));
+const attachments = visibleRootList
+  .map((r) => {
+    const p = coord.get(r.id)!;
+    const drop = Math.abs(p.x - base!.x) * BRANCH_RISE;
+    return { root: r, y: Math.min(p.y + drop, base!.y - 40) };
+  })
+  .sort((a, b) => b.y - a.y); // de abajo (mayor y) hacia arriba
+```
+
+### 2. Punto en la intersección — `src/components/GraphViewV2.tsx` (~línea 1114, tras el `map` de ramas)
+
+Se inserta este bloque justo después de `})}` que cierra el render de `branchEdges` y antes del comentario `{/* Cross-links ... */}`:
+
+```tsx
+{/* Punto de unión rama-tronco: suaviza el quiebre en cada intersección. */}
+{positionsWithOffsets
+  .filter((n) => n.isVirtual && n.id.startsWith("attach-"))
+  .map((n) => (
+    <circle
+      key={`att-${n.id}`}
+      cx={n.x}
+      cy={n.y}
+      r={3}
+      fill="url(#tree-trunk-gradient)"
+      style={{ opacity: dimFor(n.id), transition: "opacity 260ms ease" }}
+    />
+  ))}
+```
+
+No hay más ficheros implicados: los nodos `attach-*` ya existen y siguen excluidos del render de etiquetas por `if (node.isVirtual) return null;`.
