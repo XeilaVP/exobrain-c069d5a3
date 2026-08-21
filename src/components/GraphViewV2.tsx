@@ -1220,15 +1220,15 @@ const GraphView = () => {
                   <div
                     className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-2xl border bg-card/95 px-5 py-2.5 font-display font-semibold text-foreground shadow-sm"
                     style={{
-                      borderColor: "hsl(262 30% 70% / 0.55)",
-                      boxShadow: "0 8px 26px hsl(262 30% 40% / 0.10)",
+                      borderColor: "hsl(262 30% 70% / 0.60)",
+                      boxShadow: "0 8px 26px hsl(262 30% 40% / 0.20)",
                     }}
                   >
                     {node.label}
                   </div>
                 ) : showChildLabel ? (
                   <div
-                    className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center whitespace-nowrap rounded-full border bg-card/90 backdrop-blur-sm font-body text-foreground shadow-sm transition-shadow ${
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 flex items-center whitespace-nowrap rounded-full border bg-card/70 backdrop-blur-sm font-body text-foreground shadow-sm transition-shadow ${
                       isMainNote
                         ? "gap-2 px-3 py-1.5 text-[12px] font-semibold"
                         : "gap-1.5 px-2.5 py-1 text-[10px] font-medium"
