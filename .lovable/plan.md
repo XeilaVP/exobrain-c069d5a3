@@ -46,9 +46,9 @@ Raíces por `parentNoteId === null`, render completo, doble clic para plegar/des
 
 ## Detalles técnicos
 
-- `src/lib/treeGeometry.ts`: motivos normalizados como constantes, tipos `TreeJunction` / `BranchSegment`, y generador de esqueleto que **acepta posiciones fijas** por nota y solo calcula las que faltan.
-- `src/components/GraphViewV2.tsx`: consume el esqueleto; cada segmento se pinta como su propio `M … C …` con grosor/opacidad por profundidad; nodos anclados a sus junctions y por encima de las líneas. Drag de rama completa + guardado al soltar.
-- `src/contexts/NotesContext.tsx`: persistencia de `pos_x` / `pos_y` (columnas ya existentes) y siembra única para notas sin posición.
+- `src/lib/treeGeometry.ts`: motivos normalizados como constantes, tipos `TreeJunction` / `BranchSegment`, tronco recto (X constante) y función de **siembra de una sola nota** (posición inicial relativa a su madre). No hay generador global que recoloque el árbol salvo el "Reorganizar" explícito.
+- `src/components/GraphViewV2.tsx`: las posiciones vienen de `pos_x`/`pos_y`; los segmentos se dibujan entre esas coordenadas con los motivos Bézier; nodos anclados a sus junctions y por encima de las líneas. Drag de rama completa + guardado al soltar.
+- `src/contexts/NotesContext.tsx`: persistencia de `pos_x` / `pos_y` (columnas ya existentes), siembra al crear y siembra única para las notas actuales sin posición.
 - `src/index.css`: tokens de canvas oscuro y glow.
 - `src/hooks/useTheme.tsx`: default `"dark"` sin preferencia guardada.
 - Sin migraciones ni cambios de backend.
