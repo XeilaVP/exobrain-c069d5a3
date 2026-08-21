@@ -256,6 +256,20 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }, []);
 
+  // Posiciones absolutas fijas: se escriben al crear, al sembrar por primera vez
+  // y al soltar un arrastre. Nada más las toca.
+  const saveAbsolutePositions = useCallback(async (entries: { id: string; x: number; y: number }[]) => {
+    if (entries.length === 0) return;
+    const map = new Map(entries.map(e => [e.id, e]));
+    setNotes(prev => prev.map(n => {
+      const e = map.get(n.id);
+      return e ? { ...n, posX: e.x, posY: e.y } : n;
+    }));
+    await Promise.all(
+      entries.map(e => supabase.from("notes").update({ pos_x: e.x, pos_y: e.y }).eq("id", e.id)),
+    );
+  }, []);
+
   const clearAllPositions = useCallback(async () => {
     if (!user) return;
     setNotes(prev => prev.map(n => ({ ...n, posDx: null, posDy: null })));
