@@ -612,26 +612,38 @@ const GraphView = () => {
     }
   }, []);
 
-  // Al soltar una nota arrastrada, su desplazamiento de sesión (offsets[nodeId])
-  // se suma al desplazamiento ya guardado (note.posDx/posDy) y se persiste. No
-  // hace falta tocar los hijos: al recalcular posiciones, cada nota suma el
-  // desplazamiento de todos sus ancestros, así que el subárbol la sigue solo.
+  // Al soltar una nota arrastrada se guarda su posición absoluta y la de toda su
+  // descendencia con el mismo desplazamiento: las hijas conservan exactamente la
+  // colocación relativa que tenían respecto a su madre. Ninguna otra nota se toca.
   const persistDragged = useCallback(
     (nodeId: string, dx: number, dy: number) => {
       if (!nodeId.startsWith("note-")) return;
       const noteId = nodeId.replace("note-", "");
-      const note = notesRef.current.find((n) => n.id === noteId);
+      const all = notesRef.current;
+      const note = all.find((n) => n.id === noteId);
       if (!note) return;
-      const newDx = (note.posDx ?? 0) + dx;
-      const newDy = (note.posDy ?? 0) + dy;
+
+      const subtree: typeof all = [];
+      const collect = (id: string) => {
+        const n = all.find((x) => x.id === id);
+        if (!n) return;
+        subtree.push(n);
+        all.filter((c) => c.parentNoteId === id).forEach((c) => collect(c.id));
+      };
+      collect(noteId);
+
+      const entries = subtree
+        .filter((n) => n.posX != null && n.posY != null)
+        .map((n) => ({ id: n.id, x: Number(n.posX) + dx, y: Number(n.posY) + dy }));
+
       setOffsets((prev) => {
         const next = { ...prev };
         delete next[nodeId];
         return next;
       });
-      void updateNotePosition(noteId, newDx, newDy);
+      if (entries.length > 0) void saveAbsolutePositions(entries);
     },
-    [updateNotePosition],
+    [saveAbsolutePositions],
   );
   const persistDraggedRef = useRef(persistDragged);
   persistDraggedRef.current = persistDragged;
