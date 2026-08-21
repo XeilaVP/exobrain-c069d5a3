@@ -346,9 +346,15 @@ const GraphView = () => {
     });
 
     // --- Tronco recto: de la base hasta la intersección de la raíz más alta. ---
+    // La rama nace por debajo de su nota para subir ~27° en vez de salir horizontal.
+    const BRANCH_RISE = Math.tan((27 * Math.PI) / 180);
     const visibleRootList = (childrenOf.get(null) ?? []).filter((r) => visible.has(r.id));
     const attachments = visibleRootList
-      .map((r) => ({ root: r, y: Math.min(coord.get(r.id)!.y, base!.y - 40) }))
+      .map((r) => {
+        const p = coord.get(r.id)!;
+        const drop = Math.abs(p.x - base!.x) * BRANCH_RISE;
+        return { root: r, y: Math.min(p.y + drop, base!.y - 40) };
+      })
       .sort((a, b) => b.y - a.y); // de abajo (mayor y) hacia arriba
 
     pos.push({
@@ -1112,6 +1118,22 @@ const GraphView = () => {
               </g>
             );
           })}
+
+          {/* Punto de unión rama-tronco: suaviza el quiebre en cada intersección. */}
+          {positionsWithOffsets
+            .filter((n) => n.isVirtual && n.id.startsWith("attach-"))
+            .map((n) => (
+              <circle
+                key={`att-${n.id}`}
+                cx={n.x}
+                cy={n.y}
+                r={3}
+                fill="url(#tree-trunk-gradient)"
+                style={{ opacity: dimFor(n.id), transition: "opacity 260ms ease" }}
+              />
+            ))}
+
+
 
           {/* Cross-links stay secondary to the actual hierarchy. */}
           {linkEdges.map((edge, idx) => {
