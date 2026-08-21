@@ -2,25 +2,19 @@
 
 Rehacer la geometría del árbol y su render SVG en la vista actual (`GraphViewV2`), con `Group 8.svg` como fuente real de las curvas y el HTML adjunto como referencia de estilo, y **acabar con el baile de posiciones** fijando la ubicación de cada nota.
 
-## Posicionamiento: "sembrar y fijar" (respuesta a la pregunta)
+## Posicionamiento: sembrar una vez y no tocar nunca más
 
-Un modo 100% manual puro (ninguna posición calculada nunca) se puede hacer, pero tiene un problema práctico: cada nota nueva nacería sin coordenadas y habría que colocarla a mano una por una antes de poder verla; con muchas notas eso se vuelve inmanejable, y es justo por eso que ninguna app de grafo lo hace así.
+Regla dura de esta versión: **no existe ningún recálculo de posiciones**. El único momento en que el sistema calcula una posición es al crear una nota nueva que aún no tiene coordenadas.
 
-Lo que hacen las apps de referencia:
+- Cada nota guarda su posición en `pos_x` / `pos_y` (columnas ya existentes en la base de datos).
+- Al arrancar la app se leen esas coordenadas y se usan tal cual. Abrir, cerrar, seleccionar, plegar, hacer zoom, crear o borrar otras notas **no mueve nada**.
+- Nota nueva: recibe una posición inicial junto a su madre (siguiendo la silueta del árbol) y se guarda de inmediato. Desde ese instante es una posición fija más.
+- Arrastrar: la nota se mueve y se guarda al soltar. Al arrastrar una rama se arrastra también su descendencia (offset rígido), y también se guarda.
+- Notas actuales sin coordenadas: se siembran **una sola vez** en la primera carga y quedan fijadas para siempre.
+- Botón "Reorganizar" (manual, con confirmación) para quien quiera resembrar todo el árbol o una rama a propósito. Es la única forma de que algo se recoloque.
 
-- Obsidian: layout automático continuo, pero puedes "pin" un nodo y ese queda clavado.
-- Scapple / Nodus Labs / Milanote: posición manual pura, colocada al crear.
-- Muse / Heptabase / Kumu: híbrido — el sistema propone una posición al crear y a partir de ahí es tuya para siempre.
+No hay layout automático continuo, ni fuerzas, ni reacomodo por hermanas nuevas. Si una nota se mueve sola, es un bug.
 
-**Propuesta (la del híbrido, que es la adecuada aquí):**
-
-- El layout automático solo se ejecuta **una vez por nota**, en el momento de crearla, para darle una posición inicial coherente con el árbol.
-- Esa posición se guarda en la nota (las columnas `pos_x` / `pos_y` ya existen) y **nunca se vuelve a recalcular**. Abrir la app, seleccionar, plegar, hacer zoom, crear o borrar otras notas no mueve nada de lo ya colocado.
-- Arrastrar una nota la reposiciona y se guarda al soltar; al arrastrar una rama se desplaza también su descendencia, manteniendo la geometría de la rama unida (nunca la etiqueta suelta con la línea deformada).
-- Un botón "Reorganizar" (manual, con confirmación) permite volver a sembrar el layout de todo el árbol o de una rama concreta si el usuario quiere empezar de cero.
-- Notas ya existentes: se siembran una sola vez en la primera carga tras el cambio y quedan fijadas.
-
-Resultado: posiciones estables y persistentes, sin obligar a colocar cada nota nueva a mano.
 
 ## Geometría del árbol
 
