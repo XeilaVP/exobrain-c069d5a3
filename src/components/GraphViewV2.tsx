@@ -37,7 +37,7 @@ import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 import { Note } from "@/types/notes";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { buildTreeSkeleton, motifPath, type BranchMotif } from "@/lib/treeGeometry";
+import { motifPath, pickMotif, type BranchMotif } from "@/lib/treeGeometry";
 
 type NodeType = "root" | "category" | "note";
 
@@ -97,8 +97,9 @@ const GraphView = () => {
     canMoveTo,
     updateNote,
     updateNotePosition,
-    saveNotePositions,
-    clearAllPositions,
+    saveAbsolutePositions,
+    brainPos,
+    setBrainPos,
     linkNotes,
     toggleNoteCollapsed,
     setSelectedNoteId,
