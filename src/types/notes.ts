@@ -27,6 +27,9 @@ export interface Note {
   color?: string | null;
   posDx?: number | null;
   posDy?: number | null;
+  /** Posición absoluta fija en el mapa. Nunca se recalcula una vez asignada. */
+  posX?: number | null;
+  posY?: number | null;
   linkedNoteIds: string[];
   checklist: ChecklistItem[];
   noteType: NoteType;

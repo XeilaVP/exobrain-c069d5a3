@@ -48,7 +48,7 @@ interface NotesContextType {
   setActiveView: (v: "notes" | "graph") => void;
   setSelectedCategoryId: (id: string | null) => void;
   setSelectedNoteId: (id: string | null) => void;
-  addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null) => Promise<Note | null>;
+  addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null, pos?: { x: number; y: number } | null) => Promise<Note | null>;
   moveNote: (noteId: string, newParentId: string | null) => Promise<boolean>;
   getDescendantIds: (noteId: string) => Set<string>;
   canMoveTo: (noteId: string, targetId: string | null) => boolean;
@@ -85,6 +85,10 @@ interface NotesContextType {
   updateNotePosition: (id: string, dx: number | null, dy: number | null) => Promise<void>;
   saveNotePositions: (entries: { id: string; dx: number; dy: number }[]) => Promise<void>;
   clearAllPositions: () => Promise<void>;
+  /** Guarda posiciones absolutas fijas (x/y) de una o varias notas. */
+  saveAbsolutePositions: (entries: { id: string; x: number; y: number }[]) => Promise<void>;
+  brainPos: { x: number; y: number } | null;
+  setBrainPos: (pos: { x: number; y: number }) => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | null>(null);
@@ -105,6 +109,8 @@ const dbToNote = (row: any): Note => ({
   color: row.color ?? null,
   posDx: row.pos_dx ?? null,
   posDy: row.pos_dy ?? null,
+  posX: row.pos_x ?? null,
+  posY: row.pos_y ?? null,
   linkedNoteIds: row.linked_note_ids ?? [],
   checklist: (row.checklist as ChecklistItem[]) ?? [],
   noteType: (row.note_type as NoteType) ?? "text",
