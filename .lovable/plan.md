@@ -1,58 +1,65 @@
-# Árbol ExoBrain: geometría de segmentos, posiciones fijas y estética oscura
+# Posiciones manuales permanentes en el árbol actual
 
-Rehacer la geometría del árbol y su render SVG en la vista actual (`GraphViewV2`), con `Group 8.svg` como fuente real de las curvas y el HTML adjunto como referencia de estilo, y **acabar con el baile de posiciones** fijando la ubicación de cada nota.
+Conservar **exactamente el diseño de árbol que ya existe**. No rehacer geometría, estilo, ramas, nodos ni interfaz. `Group 8.svg` y el HTML adjunto quedan fuera de este trabajo.
 
-## Posicionamiento: sembrar una vez y no tocar nunca más
+## Regla fundamental
 
-Regla dura de esta versión: **no existe ningún recálculo de posiciones**. El único momento en que el sistema calcula una posición es al crear una nota nueva que aún no tiene coordenadas.
+**Una nota que ya tiene posición nunca vuelve a ser colocada por ningún algoritmo.**
 
-- Cada nota guarda su posición en `pos_x` / `pos_y` (columnas ya existentes en la base de datos).
-- Al arrancar la app se leen esas coordenadas y se usan tal cual. Abrir, cerrar, seleccionar, plegar, hacer zoom, crear o borrar otras notas **no mueve nada**.
-- Nota nueva: recibe una posición inicial junto a su madre (siguiendo la silueta del árbol) y se guarda de inmediato. Desde ese instante es una posición fija más.
-- Arrastrar: la nota se mueve y se guarda al soltar. Al arrastrar una rama se arrastra también su descendencia (offset rígido), y también se guarda.
-- Notas actuales sin coordenadas: se siembran **una sola vez** en la primera carga y quedan fijadas para siempre.
-- Botón "Reorganizar" (manual, con confirmación) para quien quiera resembrar todo el árbol o una rama a propósito. Es la única forma de que algo se recoloque.
+- Al cargar la app se leen sus coordenadas guardadas y se dibuja ahí.
+- Seleccionar, hacer zoom o pan, plegar/desplegar, abrir una nota, crear/borrar otra nota, cambiar el tamaño de pantalla o recargar la página no altera ninguna coordenada.
+- No habrá botón «Reorganizar», «Restablecer posiciones» ni ninguna acción que pueda recalcular el árbol.
+- El encuadre inicial puede ajustar únicamente la cámara (zoom/pan); jamás las posiciones del árbol.
 
-No hay layout automático continuo, ni fuerzas, ni reacomodo por hermanas nuevas. Si una nota se mueve sola, es un bug.
+## Posiciones actuales
 
+La implementación actual recalcula un esqueleto completo con `buildTreeSkeleton(...)` en cada cambio y después suma `posDx`/`posDy`. Eso explica que las posiciones base puedan cambiar aunque exista un desplazamiento guardado.
 
-## Geometría del árbol
+Se sustituirá únicamente esa fuente de coordenadas:
 
-Se abandona el modelo "coloco nodos y luego dibujo una curva entre madre e hija". El árbol se construye como **esqueleto de segmentos unidos por bifurcaciones**:
+- Las posiciones que el árbol muestra actualmente se convertirán una sola vez en coordenadas absolutas `pos_x` / `pos_y` para las notas que todavía no las tengan.
+- Esa conversión inicial conserva la disposición visual actual; no intenta mejorarla ni rediseñarla.
+- Una vez guardadas, `GraphViewV2` usará siempre `pos_x` / `pos_y` y no volverá a pasar esas notas por el generador automático.
 
-- **Tronco perfectamente recto y vertical** (una sola línea, misma X de abajo arriba, sin ondulación ni wobble). Se marca en él los puntos de bifurcación.
-- De ese tronco salen las ramas raíz a **distintas alturas, alternando lado** (izquierda/derecha), cada una arrancando exactamente en su punto del tronco.
-- Cada rama hija arranca en el punto de bifurcación exacto de su madre, con idénticas coordenadas. El nodo se pinta encima. **Ningún path continuo oculto atraviesa la bifurcación.**
+## Crear una nota
 
-- Hijas y siguientes niveles se generan con los mismos motivos, más cortos y finos con la profundidad; copa asimétrica, sin abanicos uniformes ni hijas apiladas en vertical.
-- Todo el árbol se dibuja siempre.
+Este es el **único** caso de asignación automática:
 
-**Los motivos salen de la geometría real de `Group 8.svg`**: durante la implementación se parsean sus `path d`, se toman sus puntos de control Bézier tal cual y se normalizan (origen en el inicio del tramo, extremo unitario, dirección canónica). No se simplifican ni se aproximan. El resultado queda **como datos constantes dentro de `src/lib/treeGeometry.ts`**; en runtime no se lee ningún archivo SVG, el árbol es autónomo. Se reutilizan por escala, espejo y rotación; nada de fórmulas genéricas de abanico o porcentajes de dx/dy.
+- Al crear una nota, se propone una posición libre próxima a su madre.
+- Si es raíz, se propone el siguiente punto disponible del árbol actual, alternando el lado y la altura como ya hace el diseño.
+- Se guardan `pos_x` / `pos_y` en la misma creación o inmediatamente después, antes de incorporarla al mapa.
+- La búsqueda de hueco solo lee las posiciones existentes: **no mueve ni recalcula ninguna otra nota**.
+- Desde ese momento la nueva nota queda tan fija como todas las demás.
 
-**La geometría es estable**: ni la selección ni el zoom recalculan posiciones ni alteran la silueta. Solo cambian opacidad, visibilidad de etiquetas, glow y cámara.
+## Arrastre manual
 
-## Estilo visual
+- Arrastrar una nota guarda su nueva posición absoluta al soltar.
+- Si la nota es madre, se obtiene su descendencia y se aplica exactamente el mismo delta `Δx / Δy` a cada hija, nieta y nivel inferior.
+- Así, toda la rama conserva las distancias y posiciones relativas que tenía antes del arrastre.
+- No se mueve ninguna hermana, ancestro, otra raíz ni rama ajena.
+- Se guardan las coordenadas absolutas de la madre y de todos los descendientes afectados.
 
-- Tema oscuro por defecto (si no hay preferencia guardada); el toggle se mantiene.
-- Fondo azul-negro profundo, retícula de puntos muy tenue, halo violeta suave en la base.
-- Paleta: violeta `#7A6BFF`, mint `#42E1C6`, apricot `#FFB06B`, pink `#F57BC8`, amber `#F3D75F` y tonos derivados.
-- Trazos finos: tronco ~1.7px, rama principal ~1.4px, nivel 2 ~1.1px, nivel 3+ ~0.8px, extremos redondeados, glow discreto.
-- Nodos: punto pequeño en la bifurcación y etiqueta compacta al lado (fondo oscuro translúcido, borde finísimo del color de rama). Raíces más prominentes; en zoom lejano solo el punto.
-- Selección: ilumina su rama y atenúa el resto, sin ocultar geometría ni mover la cámara.
+## Tronco
 
-## Comportamiento que se conserva
+- Se mantiene el tronco vertical recto del árbol actual.
+- Empieza en la base de ExoBrain y termina exactamente en la intersección de la rama raíz situada más arriba.
+- Nunca se dibuja una punta o prolongación por encima de esa última intersección.
+- Mover notas manualmente no dispara un layout; el tramo visible del tronco solo conecta la base con las intersecciones raíz existentes.
 
-Raíces por `parentNoteId === null`, render completo, doble clic para plegar/desplegar, clic que no toca pan/zoom, zoom anclado al cursor, pinch, encuadrar todo, y todos los diálogos y acciones (crear, borrar, renombrar, enlazar, "Mover a…").
+## Cambios técnicos mínimos
 
-## Detalles técnicos
+- `src/types/notes.ts`: exponer `posX` / `posY` en `Note`.
+- `src/contexts/NotesContext.tsx`: mapear `pos_x` / `pos_y`; guardar coordenadas absolutas; asignarlas al crear; eliminar del flujo de UI la función que borra posiciones.
+- `src/components/GraphViewV2.tsx`: conservar el render visual actual, pero usar coordenadas absolutas persistidas; eliminar el recálculo global y el botón de restablecimiento; al arrastrar, persistir la nota y solo sus descendientes.
+- `src/lib/treeGeometry.ts`: no se rediseña. Solo podrá usarse para la conversión inicial y para proponer la posición de una nota nueva; nunca para recomponer notas ya posicionadas. Se elimina la prolongación `trunk-tip` del resultado visible.
+- Sin cambios de estética, tema, notas, chat, tareas ni backend; `pos_x` / `pos_y` ya existen en la base de datos.
 
-- `src/lib/treeGeometry.ts`: motivos normalizados como constantes, tipos `TreeJunction` / `BranchSegment`, tronco recto (X constante) y función de **siembra de una sola nota** (posición inicial relativa a su madre). No hay generador global que recoloque el árbol salvo el "Reorganizar" explícito.
-- `src/components/GraphViewV2.tsx`: las posiciones vienen de `pos_x`/`pos_y`; los segmentos se dibujan entre esas coordenadas con los motivos Bézier; nodos anclados a sus junctions y por encima de las líneas. Drag de rama completa + guardado al soltar.
-- `src/contexts/NotesContext.tsx`: persistencia de `pos_x` / `pos_y` (columnas ya existentes), siembra al crear y siembra única para las notas actuales sin posición.
-- `src/index.css`: tokens de canvas oscuro y glow.
-- `src/hooks/useTheme.tsx`: default `"dark"` sin preferencia guardada.
-- Sin migraciones ni cambios de backend.
+## Verificación
 
-## Criterio de aceptación
-
-Silueta reconocible respecto a `Group 8.svg`: segmentos independientes que acaban en bifurcaciones, ramas que nacen justo ahí, sin líneas cruzando uniones, copa asimétrica y estética oscura levemente luminosa. Y, sobre todo: recargar la app, seleccionar, plegar o crear notas **no mueve ninguna nota ya colocada**.
+1. Registrar las coordenadas de todas las notas.
+2. Seleccionar, plegar/desplegar, hacer zoom/pan, recargar y cambiar el viewport: deben permanecer idénticas.
+3. Crear una nota: solo aparece la nueva; ninguna coordenada anterior cambia.
+4. Arrastrar una hoja: solo cambia esa nota.
+5. Arrastrar una madre: cambian ella y sus descendientes por el mismo delta; nada más.
+6. Recargar: todas las posiciones manuales se conservan exactamente.
+7. Confirmar visualmente que el tronco termina en la última intersección raíz y no sobresale.
