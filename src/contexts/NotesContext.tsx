@@ -640,7 +640,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       getSubcategories, getRootCategories, getCategoryPath,
       brainName, setBrainName, onboarded, setOnboarded,
       applyAiAction, getNoteVersions, restoreVersion, recoverDeletedVersion,
-      updateNotePosition, saveNotePositions, clearAllPositions,
+      updateNotePosition, saveNotePositions, clearAllPositions, saveAbsolutePositions,
+      brainPos, setBrainPos,
     }}>
       {children}
     </NotesContext.Provider>
