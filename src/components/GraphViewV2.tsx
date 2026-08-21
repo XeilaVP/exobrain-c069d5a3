@@ -298,7 +298,10 @@ const GraphView = () => {
         const dirY = grandPos ? parentPos.y - grandPos.y : -120;
         const baseAngle = Math.atan2(dirY, dirX || 0.001);
         const siblings = childrenOf.get(note.parentNoteId!) ?? [];
-        const idx = Math.max(0, siblings.findIndex((s) => s.id === note.id));
+        const idx = Math.max(
+          0,
+          siblings.findIndex((s) => s.id === note.id),
+        );
         const spread = 0.9;
         const step = siblings.length > 1 ? spread / (siblings.length - 1) : 0;
         const offset = siblings.length > 1 ? -spread / 2 + idx * step : 0;
@@ -440,7 +443,6 @@ const GraphView = () => {
     baseSavedRef.current = true;
     void setBrainPos({ x: rootPos.x, y: rootPos.y });
   }, [baseNeedsSave, positions, setBrainPos]);
-
 
   // Apply drag offsets — propagate ancestor offsets to descendants so dragging a
   // node moves its whole subtree along with it.
@@ -865,11 +867,11 @@ const GraphView = () => {
   };
 
   const widthForDepth = (depth: number, isMain = false) => {
-    if (isMain || depth <= 0) return 1.55;
-    if (depth === 1) return 1.25;
-    if (depth === 2) return 1.05;
-    if (depth === 3) return 0.9;
-    return 0.78;
+    if (isMain || depth <= 0) return 2;
+    if (depth === 1) return 2;
+    if (depth === 2) return 2;
+    if (depth === 3) return 2;
+    return 1;
   };
 
   // Rama con protagonismo: subárbol de la raíz del nodo enfocado
@@ -1132,8 +1134,6 @@ const GraphView = () => {
                 style={{ opacity: dimFor(n.id), transition: "opacity 260ms ease" }}
               />
             ))}
-
-
 
           {/* Cross-links stay secondary to the actual hierarchy. */}
           {linkEdges.map((edge, idx) => {
@@ -1562,8 +1562,6 @@ const GraphView = () => {
             </div>
           )}
         </div>
-
-
 
         <button
           onClick={(e) => {
