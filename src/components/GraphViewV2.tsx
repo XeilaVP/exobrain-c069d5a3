@@ -77,6 +77,9 @@ interface Edge {
 const ROOT_R = 30;
 const CAT_R = 22;
 const NOTE_R = 12;
+// Pulsación larga (menú contextual / crear nodo). Más larga para no chocar con gestos.
+const LONG_PRESS_MS = 800;
+const GESTURE_MOVE_THRESHOLD = 8;
 
 const TREE_BRANCH_PALETTE = [
   { start: "316 66% 68%", end: "316 73% 82%" }, // pink — Psico
