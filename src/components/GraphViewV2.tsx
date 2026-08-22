@@ -174,9 +174,23 @@ const GraphView = () => {
   const [hiddenCategoryIds, setHiddenCategoryIds] = useState<Set<string>>(new Set());
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  // Todo el árbol nace desplegado: el plegado es manual (doble clic) y vive en sesión,
-  // ignorando el estado persistido `isCollapsed`.
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  // Candado de posiciones: por defecto bloqueado para evitar arrastres accidentales
+  // al hacer zoom/pan, especialmente en móvil.
+  const [positionsLocked, setPositionsLocked] = useState(() => {
+    try {
+      const saved = localStorage.getItem("exobrain-positions-locked");
+      return saved === null ? true : saved === "true";
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("exobrain-positions-locked", String(positionsLocked));
+    } catch {
+      // ignore
+    }
+  }, [positionsLocked]);
 
   const rootNotes = useMemo(() => notes.filter((n) => !n.parentNoteId), [notes]);
   const visibleRoots = useMemo(
