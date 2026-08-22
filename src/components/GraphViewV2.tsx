@@ -21,6 +21,8 @@ import {
   History,
   Download,
   Move,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
