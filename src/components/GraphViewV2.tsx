@@ -355,7 +355,6 @@ const GraphView = () => {
       visible.add(note.id);
       depthOf.set(note.id, depth);
       branchRootOf.set(note.id, branchRootId);
-      if (collapsedIds.has(note.id)) return;
       (childrenOf.get(note.id) ?? []).forEach((c) => walk(c, depth + 1, branchRootId));
     };
     (childrenOf.get(null) ?? []).forEach((root) => {
