@@ -938,14 +938,6 @@ const GraphView = () => {
       style={{
         touchAction: "none",
       }}
-      onClick={(e) => {
-        // Clic en el fondo: quitar el foco de rama.
-        const target = e.target as HTMLElement;
-        const onBackground = !target.closest(
-          "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
-        );
-        if (onBackground) setFocusNoteId(null);
-      }}
       onPointerDown={(e) => {
         if (e.button !== 0 && e.pointerType === "mouse") return;
         const target = e.target as HTMLElement;
@@ -1009,20 +1001,24 @@ const GraphView = () => {
         didPan.current = false;
         setIsPanning(true);
       }}
-      onClick={() => {
+      onClick={(e) => {
         if (didPan.current) {
           didPan.current = false;
           return;
         }
-        if (openPostIt) {
-          setOpenPostIt(null);
+        const target = e.target as HTMLElement;
+        const onBackground = !target.closest(
+          "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
+        );
+        if (onBackground) {
           setFocusNoteId(null);
-        }
-        if (contextMenu) setContextMenu(null);
-        if (colorPickerCat) setColorPickerCat(null);
-        if (linkingNoteId) {
-          setLinkingNoteId(null);
-          toast.info("Enlace cancelado");
+          if (openPostIt) setOpenPostIt(null);
+          if (contextMenu) setContextMenu(null);
+          if (colorPickerCat) setColorPickerCat(null);
+          if (linkingNoteId) {
+            setLinkingNoteId(null);
+            toast.info("Enlace cancelado");
+          }
         }
       }}
     >
