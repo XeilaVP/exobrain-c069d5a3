@@ -899,7 +899,7 @@ const GraphView = () => {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [cancelLongPress]);
+  }, [cancelLongPress, scheduleView, commitView]);
 
   // Click handling with double-click detection
   // - 1 clic en nota: activa/resalta su rama (focus).
