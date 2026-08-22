@@ -5,9 +5,8 @@ Dos ajustes de interacción en el mapa. No cambia la geometría del árbol, ni e
 ## 1. Botón candado (bloquear posiciones)
 
 - Botón flotante en los controles del mapa, con icono de candado cerrado/abierto.
-- **Bloqueado (por defecto en móvil):** ninguna nota ni nodo se puede arrastrar. El pinch-zoom, el pan y los clics siguen funcionando igual. Así, al hacer zoom con dos dedos, es imposible mover un nodo sin querer.
+- **Bloqueado por defecto en todos los dispositivos:** ninguna nota ni nodo se puede arrastrar. El pinch-zoom, el pan y los clics siguen funcionando igual. Así, al hacer zoom con dos dedos, es imposible mover un nodo sin querer.
 - **Desbloqueado:** arrastre manual normal (y las hijas siguen a la madre, como ahora).
-- En escritorio arranca desbloqueado, ya que el ratón no provoca arrastres accidentales.
 - El estado se recuerda en el navegador, así que si lo dejas bloqueado sigue bloqueado al volver.
 - Indicador visual claro: candado cerrado resaltado cuando está bloqueado.
 
