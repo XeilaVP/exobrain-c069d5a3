@@ -149,6 +149,12 @@ const GraphView = () => {
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didInitialFitRef = useRef(false);
   const viewZoomRef = useRef(1);
+  // Vista en vivo durante gestos: refs como fuente de verdad + transform imperativo.
+  const panRef = useRef({ x: 0, y: 0 });
+  const worldRef = useRef<HTMLDivElement | null>(null);
+  const rafRef = useRef<number | null>(null);
+  // Bloqueo de long-press mientras dura un gesto (2 dedos o desplazamiento).
+  const gestureBlockRef = useRef(false);
 
   // Drag offsets per node id (session-local, hasta que se guarden)
   const [offsets, setOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
