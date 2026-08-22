@@ -1190,7 +1190,7 @@ const GraphView = () => {
                     ? { duration: 0 }
                     : { type: "spring", stiffness: 290, damping: 28 }
                 }
-                className="absolute cursor-grab active:cursor-grabbing touch-none"
+                className={`absolute touch-none ${positionsLocked || isRoot ? "cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                 data-graph-node
                 style={{
                   width: 1,
@@ -1203,16 +1203,17 @@ const GraphView = () => {
                   e.stopPropagation();
                   didDrag.current = false;
                   const cur = offsets[node.id] || { dx: 0, dy: 0 };
-                  // La base ExoBrain está anclada: solo se arrastran las notas.
-                  dragState.current = isRoot
-                    ? null
-                    : {
-                        nodeId: node.id,
-                        startX: e.clientX,
-                        startY: e.clientY,
-                        baseDx: cur.dx,
-                        baseDy: cur.dy,
-                      };
+                  // La base ExoBrain está anclada. Con el candado activo no se inicia arrastre.
+                  dragState.current =
+                    isRoot || positionsLocked
+                      ? null
+                      : {
+                          nodeId: node.id,
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          baseDx: cur.dx,
+                          baseDy: cur.dy,
+                        };
                   startLongPress(node.id, e.clientX, e.clientY);
                 }}
                 onPointerUp={cancelLongPress}
