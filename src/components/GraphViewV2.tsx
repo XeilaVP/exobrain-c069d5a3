@@ -809,6 +809,9 @@ const GraphView = () => {
   }, [cancelLongPress]);
 
   // Click handling with double-click detection
+  // - 1 clic en nota: activa/resalta su rama (focus).
+  // - 2 clics en nota: abre el post-it.
+  // - 1 clic en raíz: abre el diálogo de nombre del cerebro.
   const handleNodeClick = useCallback(
     (nodeId: string, clientX: number, clientY: number) => {
       if (didDrag.current) {
@@ -824,54 +827,43 @@ const GraphView = () => {
         return;
       }
 
+      // Root no activa ninguna rama: un solo clic abre su diálogo.
+      if (nodeId === "root") {
+        setShowBrainDialog(true);
+        return;
+      }
+
+      if (!nodeId.startsWith("note-")) return;
+      const nId = nodeId.replace("note-", "");
+
       if (clickTimer.current) {
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
-        // Double click: plegar/desplegar manualmente (no altera pan ni zoom)
-        if (nodeId.startsWith("note-")) {
-          const nId = nodeId.replace("note-", "");
-          const hasChildren = notes.some((n) => n.parentNoteId === nId);
-          if (hasChildren) {
-            setCollapsedIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(nId)) next.delete(nId);
-              else next.add(nId);
-              return next;
-            });
-            toggleNoteCollapsed(nId);
-          }
-        } else if (nodeId === "root") {
-          setShowBrainDialog(true);
-        }
+        // Doble clic: abrir la nota.
+        setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
         return;
       }
+
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
-        if (nodeId.startsWith("note-")) {
-          const nId = nodeId.replace("note-", "");
-          // If linking via single click on second note
-          if (linkingNoteId && linkingNoteId !== nId) {
-            setConfirmDialog({
-              message: "¿Enlazar estas dos notas?",
-              onConfirm: () => {
-                linkNotes(linkingNoteId, nId);
-                setLinkingNoteId(null);
-                setConfirmDialog(null);
-                toast.success("Notas enlazadas");
-              },
-            });
-            return;
-          }
-          // Selección puramente visual: resalta la rama y atenúa el resto.
-          setFocusNoteId(nId);
-          setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
-        } else if (nodeId === "root") {
-          // single click on root opens rename
-          setShowBrainDialog(true);
+        // If linking via single click on second note
+        if (linkingNoteId && linkingNoteId !== nId) {
+          setConfirmDialog({
+            message: "¿Enlazar estas dos notas?",
+            onConfirm: () => {
+              linkNotes(linkingNoteId, nId);
+              setLinkingNoteId(null);
+              setConfirmDialog(null);
+              toast.success("Notas enlazadas");
+            },
+          });
+          return;
         }
+        // Clic simple: activar/resaltar la rama.
+        setFocusNoteId(nId);
       }, 240);
     },
-    [contextMenu, notes, toggleNoteCollapsed, linkingNoteId, linkNotes],
+    [contextMenu, linkingNoteId, linkNotes],
   );
 
   // Straight SVG segments: the layout creates the tree silhouette.
