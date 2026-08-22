@@ -423,7 +423,7 @@ const GraphView = () => {
         parentNoteId: note.parentNoteId,
         noteType: note.noteType,
         hasChildren: children.length > 0,
-        isCollapsed: collapsedIds.has(note.id) || children.length === 0,
+        isCollapsed: children.length === 0,
         isMain: depth === 1,
         depth: Math.max(0, depth - 1),
         branchRootId,
@@ -438,7 +438,7 @@ const GraphView = () => {
     });
 
     return { positions: pos, edges: eds, parentMap: parent, seeds: seedList, baseNeedsSave: needsBaseSave };
-  }, [notes, rootNotes, brainName, brainPos, size.w, size.h, collapsedIds, hiddenCategoryIds]);
+  }, [notes, rootNotes, brainName, brainPos, size.w, size.h, hiddenCategoryIds]);
 
   // Persistencia de la única asignación automática que existe: notas sin posición.
   const seededRef = useRef<Set<string>>(new Set());
