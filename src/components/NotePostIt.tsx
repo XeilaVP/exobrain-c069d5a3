@@ -284,7 +284,9 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       className="fixed z-50 surface-panel rounded-2xl flex flex-col overflow-hidden"
       style={{ left, top, width: panelWidth, height: panelHeight }}
+      data-no-pan
       onClick={e => e.stopPropagation()}
+
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
