@@ -581,21 +581,62 @@ const GraphView = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layoutSignature, size.w, size.h]);
 
-  // Zoom con rueda / pinch de trackpad anclado al cursor (listener nativo no pasivo).
+  // Mantener los refs sincronizados cuando pan/zoom cambian por vías declarativas.
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
+  useEffect(() => {
+    viewZoomRef.current = viewZoom;
+  }, [viewZoom]);
 
-  const zoomAt = useCallback((px: number, py: number, factor: number) => {
-    setViewZoom((z) => {
+  // Aplicación imperativa del transform (1 vez por frame, sin re-render de nodos).
+  const applyViewTransform = useCallback(() => {
+    rafRef.current = null;
+    const el = worldRef.current;
+    if (!el) return;
+    const z = viewZoomRef.current;
+    el.style.transform = `matrix(${z}, 0, 0, ${z}, ${panRef.current.x}, ${panRef.current.y})`;
+  }, []);
+
+  const scheduleView = useCallback(() => {
+    if (rafRef.current == null) rafRef.current = requestAnimationFrame(applyViewTransform);
+  }, [applyViewTransform]);
+
+  // Sincroniza React con la vista final del gesto (una sola vez).
+  const commitView = useCallback(() => {
+    if (rafRef.current != null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    applyViewTransform();
+    setPan({ ...panRef.current });
+    setViewZoom(viewZoomRef.current);
+  }, [applyViewTransform]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
+
+  // Zoom con rueda / pinch de trackpad anclado al cursor (listener nativo no pasivo).
+  const zoomAt = useCallback(
+    (px: number, py: number, factor: number) => {
+      const z = viewZoomRef.current || 1;
       const next = Math.max(0.2, Math.min(4, z * factor));
       const k = next / z;
-      setPan((p) => ({ x: px - (px - p.x) * k, y: py - (py - p.y) * k }));
+      const p = panRef.current;
+      panRef.current = { x: px - (px - p.x) * k, y: py - (py - p.y) * k };
       viewZoomRef.current = next;
-      return next;
-    });
-  }, []);
+      scheduleView();
+    },
+    [scheduleView],
+  );
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    let commitTimer: ReturnType<typeof setTimeout> | null = null;
     const onWheel = (e: WheelEvent) => {
       // Rueda sobre el post-it: scroll de la nota, sin zoom del árbol.
       if (e.target instanceof Element && e.target.closest("[data-no-pan]")) return;
@@ -605,10 +646,19 @@ const GraphView = () => {
       const factor = Math.exp(-dy * (e.ctrlKey ? 0.0025 : 0.0015));
       setIsPanning(true);
       zoomAt(e.clientX - rect.left, e.clientY - rect.top, factor);
+      if (commitTimer) clearTimeout(commitTimer);
+      commitTimer = setTimeout(() => {
+        commitTimer = null;
+        commitView();
+      }, 140);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [zoomAt]);
+    return () => {
+      if (commitTimer) clearTimeout(commitTimer);
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, [zoomAt, commitView]);
+
 
   // Long-press handlers
   const startLongPress = useCallback(
