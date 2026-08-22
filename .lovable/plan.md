@@ -19,7 +19,7 @@ Nuevo comportamiento:
 - **Un clic** sobre una nota: solo la activa visualmente (resalta su rama con hijas y atenúa el resto). No abre nada.
 - **Doble clic** sobre una nota: abre el post-it de esa nota.
 - Se elimina el plegado/desplegado por doble clic: las hijas quedan siempre visibles, como pides.
-- El nodo raíz mantiene su comportamiento (abrir el nombre del cerebro), ahora con doble clic.
+- El nodo raíz abre el nombre del cerebro con **un solo clic** (no activa ninguna rama, así que no necesita doble clic).
 - Clic en el fondo del mapa: quita la activación (deja de haber rama resaltada).
 - El resto de gestos no cambia: mantener pulsado sigue abriendo el menú contextual, y enlazar notas sigue funcionando con el mismo clic de selección.
 
