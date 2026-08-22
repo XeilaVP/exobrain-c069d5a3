@@ -1492,6 +1492,19 @@ const GraphView = () => {
         >
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
         </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setPositionsLocked((v) => !v);
+          }}
+          className={`p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 transition-all flex items-center justify-center ${
+            positionsLocked ? "text-primary" : "text-muted-foreground"
+          }`}
+          title={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
+          aria-label={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
+        >
+          {positionsLocked ? <Lock size={16} /> : <LockOpen size={16} />}
+        </button>
         <div className="relative">
           <button
             onClick={(e) => {
