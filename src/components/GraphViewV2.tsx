@@ -1131,6 +1131,7 @@ const GraphView = () => {
 
       {/* Tree world: SVG branches + nodes */}
       <div
+        ref={worldRef}
         className="absolute inset-0"
         style={{
           transform: `matrix(${viewZoom}, 0, 0, ${viewZoom}, ${pan.x}, ${pan.y})`,
