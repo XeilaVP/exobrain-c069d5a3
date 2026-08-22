@@ -1043,6 +1043,7 @@ const GraphView = () => {
 
         // Always track pointer for pinch detection
         pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        pointerStarts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         // Second pointer -> start pinch (cancel any in-flight pan, node drag or canvas long-press)
         if (pointersRef.current.size >= 2) {
@@ -1052,13 +1053,14 @@ const GraphView = () => {
           pinchState.current = {
             startDist: dist,
             startZoom: viewZoomRef.current || 1,
-            startPanX: pan.x,
-            startPanY: pan.y,
+            startPanX: panRef.current.x,
+            startPanY: panRef.current.y,
             centerX: (p1.x + p2.x) / 2,
             centerY: (p1.y + p2.y) / 2,
           };
           panState.current = null;
           dragState.current = null;
+          gestureBlockRef.current = true;
           cancelLongPress();
           if (canvasLongPressTimer.current) {
             clearTimeout(canvasLongPressTimer.current);
@@ -1073,17 +1075,18 @@ const GraphView = () => {
         if (!onBackground) return;
 
         // Long-press on empty canvas -> open "create" dialog (works for touch and mouse)
+        if (gestureBlockRef.current) return;
         canvasLongPressStart.current = { x: e.clientX, y: e.clientY };
         if (canvasLongPressTimer.current) clearTimeout(canvasLongPressTimer.current);
         canvasLongPressTimer.current = setTimeout(() => {
           canvasLongPressTimer.current = null;
           // Only trigger if user hasn't started panning/pinching
-          if (didPan.current || pinchState.current || pointersRef.current.size >= 2) return;
+          if (gestureBlockRef.current || didPan.current || pinchState.current || pointersRef.current.size >= 2) return;
           setCreateDialog({ x: e.clientX, y: e.clientY });
           // Cancel any pending pan so the click after release doesn't act
           panState.current = null;
           didPan.current = true;
-        }, 550);
+        }, LONG_PRESS_MS);
 
         // Touch: 1-finger canvas pan is disabled (use 2 fingers). Only mouse/pen pans with one pointer.
         if (e.pointerType === "touch") return;
@@ -1091,8 +1094,8 @@ const GraphView = () => {
         panState.current = {
           startX: e.clientX,
           startY: e.clientY,
-          baseX: pan.x,
-          baseY: pan.y,
+          baseX: panRef.current.x,
+          baseY: panRef.current.y,
         };
         didPan.current = false;
         setIsPanning(true);
