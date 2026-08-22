@@ -664,7 +664,11 @@ const GraphView = () => {
   const startLongPress = useCallback(
     (nodeId: string, clientX: number, clientY: number) => {
       didLongPress.current = false;
+      // Durante un gesto (2 dedos o desplazamiento) no se programa long-press.
+      if (gestureBlockRef.current || pointersRef.current.size >= 2) return;
       longPressTimer.current = setTimeout(() => {
+        longPressTimer.current = null;
+        if (gestureBlockRef.current || pointersRef.current.size >= 2 || pinchState.current) return;
         didLongPress.current = true;
         // If linking and this is a note
         if (linkingNoteId && nodeId.startsWith("note-")) {
@@ -683,10 +687,11 @@ const GraphView = () => {
           return;
         }
         setContextMenu({ nodeId, x: clientX, y: clientY });
-      }, 550);
+      }, LONG_PRESS_MS);
     },
     [linkingNoteId, linkNotes],
   );
+
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) {
