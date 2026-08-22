@@ -161,6 +161,9 @@ const GraphView = () => {
   );
   const panState = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  // Punteros originados dentro de una zona [data-no-pan] (post-it): se ignoran en el canvas.
+  const ignoredPointers = useRef<Set<number>>(new Set());
+
   const pinchState = useRef<{
     startDist: number;
     startZoom: number;
