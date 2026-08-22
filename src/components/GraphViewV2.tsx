@@ -103,7 +103,6 @@ const GraphView = () => {
     brainPos,
     setBrainPos,
     linkNotes,
-    toggleNoteCollapsed,
     setSelectedNoteId,
     selectedNoteId,
     brainName,
