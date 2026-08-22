@@ -161,6 +161,9 @@ const GraphView = () => {
   );
   const panState = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  // Punteros originados dentro de una zona [data-no-pan] (post-it): se ignoran en el canvas.
+  const ignoredPointers = useRef<Set<number>>(new Set());
+
   const pinchState = useRef<{
     startDist: number;
     startZoom: number;
@@ -588,6 +591,8 @@ const GraphView = () => {
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      // Rueda sobre el post-it: scroll de la nota, sin zoom del árbol.
+      if (e.target instanceof Element && e.target.closest("[data-no-pan]")) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
@@ -670,9 +675,18 @@ const GraphView = () => {
   const persistDraggedRef = useRef(persistDragged);
   persistDraggedRef.current = persistDragged;
 
+  // Zona excluida: el post-it y cualquier overlay marcado con data-no-pan.
+  const isInNoPan = (target: EventTarget | null) =>
+    !!(target instanceof Element && target.closest("[data-no-pan]"));
+
   // Drag / pan / pinch pointer handlers (window-level)
   useEffect(() => {
     const onDown = (e: PointerEvent) => {
+      // Eventos nacidos dentro del post-it no interactúan con el canvas.
+      if (isInNoPan(e.target)) {
+        ignoredPointers.current.add(e.pointerId);
+        return;
+      }
       // Track any pointer that we haven't seen. If it becomes the 2nd active pointer
       // and we don't yet have a pinch, initiate one from current pan/zoom state.
       if (pointersRef.current.has(e.pointerId)) return;
@@ -704,6 +718,7 @@ const GraphView = () => {
       }
     };
     const onMove = (e: PointerEvent) => {
+      if (ignoredPointers.current.has(e.pointerId)) return;
       // Update tracked pointer position
       if (pointersRef.current.has(e.pointerId)) {
         pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -769,6 +784,10 @@ const GraphView = () => {
       }
     };
     const onUp = (e: PointerEvent) => {
+      if (ignoredPointers.current.has(e.pointerId)) {
+        ignoredPointers.current.delete(e.pointerId);
+        return;
+      }
       pointersRef.current.delete(e.pointerId);
       const ds = dragState.current;
       dragState.current = null;
@@ -941,6 +960,7 @@ const GraphView = () => {
       onPointerDown={(e) => {
         if (e.button !== 0 && e.pointerType === "mouse") return;
         const target = e.target as HTMLElement;
+        if (target.closest("[data-no-pan]")) return;
         const onBackground = !target.closest(
           "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
         );
@@ -1007,6 +1027,7 @@ const GraphView = () => {
           return;
         }
         const target = e.target as HTMLElement;
+        if (target.closest("[data-no-pan]")) return;
         const onBackground = !target.closest(
           "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
         );
