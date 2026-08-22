@@ -172,6 +172,8 @@ const GraphView = () => {
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   // Punteros originados dentro de una zona [data-no-pan] (post-it): se ignoran en el canvas.
   const ignoredPointers = useRef<Set<number>>(new Set());
+  // Posición inicial de cada puntero, para detectar desplazamiento del gesto.
+  const pointerStarts = useRef<Map<number, { x: number; y: number }>>(new Map());
 
   const pinchState = useRef<{
     startDist: number;
