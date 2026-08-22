@@ -938,6 +938,14 @@ const GraphView = () => {
       style={{
         touchAction: "none",
       }}
+      onClick={(e) => {
+        // Clic en el fondo: quitar el foco de rama.
+        const target = e.target as HTMLElement;
+        const onBackground = !target.closest(
+          "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
+        );
+        if (onBackground) setFocusNoteId(null);
+      }}
       onPointerDown={(e) => {
         if (e.button !== 0 && e.pointerType === "mouse") return;
         const target = e.target as HTMLElement;
