@@ -745,6 +745,15 @@ const GraphView = () => {
 
   // Drag / pan / pinch pointer handlers (window-level)
   useEffect(() => {
+    const cancelAllLongPress = () => {
+      cancelLongPress();
+      if (canvasLongPressTimer.current) {
+        clearTimeout(canvasLongPressTimer.current);
+        canvasLongPressTimer.current = null;
+      }
+      canvasLongPressStart.current = null;
+    };
+
     const onDown = (e: PointerEvent) => {
       // Eventos nacidos dentro del post-it no interactúan con el canvas.
       if (isInNoPan(e.target)) {
@@ -755,6 +764,7 @@ const GraphView = () => {
       // and we don't yet have a pinch, initiate one from current pan/zoom state.
       if (pointersRef.current.has(e.pointerId)) return;
       pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      pointerStarts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       if (pointersRef.current.size >= 2 && !pinchState.current) {
         const pts = Array.from(pointersRef.current.values());
         const [p1, p2] = pts;
@@ -762,21 +772,16 @@ const GraphView = () => {
         pinchState.current = {
           startDist: dist,
           startZoom: viewZoomRef.current || 1,
-          startPanX: 0,
-          startPanY: 0,
+          startPanX: panRef.current.x,
+          startPanY: panRef.current.y,
           centerX: (p1.x + p2.x) / 2,
           centerY: (p1.y + p2.y) / 2,
         };
-        setPan((p) => {
-          if (pinchState.current) {
-            pinchState.current.startPanX = p.x;
-            pinchState.current.startPanY = p.y;
-          }
-          return p;
-        });
         panState.current = null;
         dragState.current = null;
-        cancelLongPress();
+        // 2 dedos: se cancela cualquier long-press y queda bloqueado hasta soltar.
+        gestureBlockRef.current = true;
+        cancelAllLongPress();
         didPan.current = true;
         setIsPanning(true);
       }
@@ -788,13 +793,12 @@ const GraphView = () => {
         pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       }
 
-      // Cancel canvas long-press if pointer moved too far
-      if (canvasLongPressTimer.current && canvasLongPressStart.current) {
-        const s = canvasLongPressStart.current;
-        if (Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8) {
-          clearTimeout(canvasLongPressTimer.current);
-          canvasLongPressTimer.current = null;
-          canvasLongPressStart.current = null;
+      // Desplazamiento suficiente: se cancela y bloquea el long-press del gesto actual.
+      const start = pointerStarts.current.get(e.pointerId);
+      if (start && !gestureBlockRef.current) {
+        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > GESTURE_MOVE_THRESHOLD) {
+          gestureBlockRef.current = true;
+          cancelAllLongPress();
         }
       }
 
@@ -812,10 +816,9 @@ const GraphView = () => {
           // World point under original centroid should stay under current centroid
           const worldX = (ps.centerX - ps.startPanX) / ps.startZoom;
           const worldY = (ps.centerY - ps.startPanY) / ps.startZoom;
-          const newPanX = cx - worldX * newZoom;
-          const newPanY = cy - worldY * newZoom;
-          setViewZoom(newZoom);
-          setPan({ x: newPanX, y: newPanY });
+          viewZoomRef.current = newZoom;
+          panRef.current = { x: cx - worldX * newZoom, y: cy - worldY * newZoom };
+          scheduleView();
         }
         return;
       }
@@ -844,7 +847,8 @@ const GraphView = () => {
       const rawDy = e.clientY - ps.startY;
       if (!didPan.current && Math.hypot(rawDx, rawDy) > 5) didPan.current = true;
       if (didPan.current) {
-        setPan({ x: ps.baseX + rawDx, y: ps.baseY + rawDy });
+        panRef.current = { x: ps.baseX + rawDx, y: ps.baseY + rawDy };
+        scheduleView();
       }
     };
     const onUp = (e: PointerEvent) => {
@@ -853,6 +857,7 @@ const GraphView = () => {
         return;
       }
       pointersRef.current.delete(e.pointerId);
+      pointerStarts.current.delete(e.pointerId);
       const ds = dragState.current;
       dragState.current = null;
 
@@ -876,9 +881,14 @@ const GraphView = () => {
 
       if (pointersRef.current.size === 0) {
         panState.current = null;
+        pointerStarts.current.clear();
+        // Fin del gesto: se desbloquea el long-press y React se sincroniza una sola vez.
+        gestureBlockRef.current = false;
+        commitView();
         setIsPanning(false);
       }
     };
+
     window.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
