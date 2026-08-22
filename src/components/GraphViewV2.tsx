@@ -21,6 +21,8 @@ import {
   History,
   Download,
   Move,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
@@ -101,7 +103,6 @@ const GraphView = () => {
     brainPos,
     setBrainPos,
     linkNotes,
-    toggleNoteCollapsed,
     setSelectedNoteId,
     selectedNoteId,
     brainName,
@@ -173,9 +174,23 @@ const GraphView = () => {
   const [hiddenCategoryIds, setHiddenCategoryIds] = useState<Set<string>>(new Set());
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  // Todo el árbol nace desplegado: el plegado es manual (doble clic) y vive en sesión,
-  // ignorando el estado persistido `isCollapsed`.
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  // Candado de posiciones: por defecto bloqueado para evitar arrastres accidentales
+  // al hacer zoom/pan, especialmente en móvil.
+  const [positionsLocked, setPositionsLocked] = useState(() => {
+    try {
+      const saved = localStorage.getItem("exobrain-positions-locked");
+      return saved === null ? true : saved === "true";
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("exobrain-positions-locked", String(positionsLocked));
+    } catch {
+      // ignore
+    }
+  }, [positionsLocked]);
 
   const rootNotes = useMemo(() => notes.filter((n) => !n.parentNoteId), [notes]);
   const visibleRoots = useMemo(
@@ -340,7 +355,6 @@ const GraphView = () => {
       visible.add(note.id);
       depthOf.set(note.id, depth);
       branchRootOf.set(note.id, branchRootId);
-      if (collapsedIds.has(note.id)) return;
       (childrenOf.get(note.id) ?? []).forEach((c) => walk(c, depth + 1, branchRootId));
     };
     (childrenOf.get(null) ?? []).forEach((root) => {
@@ -409,7 +423,7 @@ const GraphView = () => {
         parentNoteId: note.parentNoteId,
         noteType: note.noteType,
         hasChildren: children.length > 0,
-        isCollapsed: collapsedIds.has(note.id) || children.length === 0,
+        isCollapsed: children.length === 0,
         isMain: depth === 1,
         depth: Math.max(0, depth - 1),
         branchRootId,
@@ -424,7 +438,7 @@ const GraphView = () => {
     });
 
     return { positions: pos, edges: eds, parentMap: parent, seeds: seedList, baseNeedsSave: needsBaseSave };
-  }, [notes, rootNotes, brainName, brainPos, size.w, size.h, collapsedIds, hiddenCategoryIds]);
+  }, [notes, rootNotes, brainName, brainPos, size.w, size.h, hiddenCategoryIds]);
 
   // Persistencia de la única asignación automática que existe: notas sin posición.
   const seededRef = useRef<Set<string>>(new Set());
@@ -795,6 +809,9 @@ const GraphView = () => {
   }, [cancelLongPress]);
 
   // Click handling with double-click detection
+  // - 1 clic en nota: activa/resalta su rama (focus).
+  // - 2 clics en nota: abre el post-it.
+  // - 1 clic en raíz: abre el diálogo de nombre del cerebro.
   const handleNodeClick = useCallback(
     (nodeId: string, clientX: number, clientY: number) => {
       if (didDrag.current) {
@@ -810,54 +827,43 @@ const GraphView = () => {
         return;
       }
 
+      // Root no activa ninguna rama: un solo clic abre su diálogo.
+      if (nodeId === "root") {
+        setShowBrainDialog(true);
+        return;
+      }
+
+      if (!nodeId.startsWith("note-")) return;
+      const nId = nodeId.replace("note-", "");
+
       if (clickTimer.current) {
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
-        // Double click: plegar/desplegar manualmente (no altera pan ni zoom)
-        if (nodeId.startsWith("note-")) {
-          const nId = nodeId.replace("note-", "");
-          const hasChildren = notes.some((n) => n.parentNoteId === nId);
-          if (hasChildren) {
-            setCollapsedIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(nId)) next.delete(nId);
-              else next.add(nId);
-              return next;
-            });
-            toggleNoteCollapsed(nId);
-          }
-        } else if (nodeId === "root") {
-          setShowBrainDialog(true);
-        }
+        // Doble clic: abrir la nota.
+        setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
         return;
       }
+
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
-        if (nodeId.startsWith("note-")) {
-          const nId = nodeId.replace("note-", "");
-          // If linking via single click on second note
-          if (linkingNoteId && linkingNoteId !== nId) {
-            setConfirmDialog({
-              message: "¿Enlazar estas dos notas?",
-              onConfirm: () => {
-                linkNotes(linkingNoteId, nId);
-                setLinkingNoteId(null);
-                setConfirmDialog(null);
-                toast.success("Notas enlazadas");
-              },
-            });
-            return;
-          }
-          // Selección puramente visual: resalta la rama y atenúa el resto.
-          setFocusNoteId(nId);
-          setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
-        } else if (nodeId === "root") {
-          // single click on root opens rename
-          setShowBrainDialog(true);
+        // If linking via single click on second note
+        if (linkingNoteId && linkingNoteId !== nId) {
+          setConfirmDialog({
+            message: "¿Enlazar estas dos notas?",
+            onConfirm: () => {
+              linkNotes(linkingNoteId, nId);
+              setLinkingNoteId(null);
+              setConfirmDialog(null);
+              toast.success("Notas enlazadas");
+            },
+          });
+          return;
         }
+        // Clic simple: activar/resaltar la rama.
+        setFocusNoteId(nId);
       }, 240);
     },
-    [contextMenu, notes, toggleNoteCollapsed, linkingNoteId, linkNotes],
+    [contextMenu, linkingNoteId, linkNotes],
   );
 
   // Straight SVG segments: the layout creates the tree silhouette.
@@ -995,20 +1001,24 @@ const GraphView = () => {
         didPan.current = false;
         setIsPanning(true);
       }}
-      onClick={() => {
+      onClick={(e) => {
         if (didPan.current) {
           didPan.current = false;
           return;
         }
-        if (openPostIt) {
-          setOpenPostIt(null);
+        const target = e.target as HTMLElement;
+        const onBackground = !target.closest(
+          "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
+        );
+        if (onBackground) {
           setFocusNoteId(null);
-        }
-        if (contextMenu) setContextMenu(null);
-        if (colorPickerCat) setColorPickerCat(null);
-        if (linkingNoteId) {
-          setLinkingNoteId(null);
-          toast.info("Enlace cancelado");
+          if (openPostIt) setOpenPostIt(null);
+          if (contextMenu) setContextMenu(null);
+          if (colorPickerCat) setColorPickerCat(null);
+          if (linkingNoteId) {
+            setLinkingNoteId(null);
+            toast.info("Enlace cancelado");
+          }
         }
       }}
     >
@@ -1184,7 +1194,7 @@ const GraphView = () => {
                     ? { duration: 0 }
                     : { type: "spring", stiffness: 290, damping: 28 }
                 }
-                className="absolute cursor-grab active:cursor-grabbing touch-none"
+                className={`absolute touch-none ${positionsLocked || isRoot ? "cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                 data-graph-node
                 style={{
                   width: 1,
@@ -1197,16 +1207,17 @@ const GraphView = () => {
                   e.stopPropagation();
                   didDrag.current = false;
                   const cur = offsets[node.id] || { dx: 0, dy: 0 };
-                  // La base ExoBrain está anclada: solo se arrastran las notas.
-                  dragState.current = isRoot
-                    ? null
-                    : {
-                        nodeId: node.id,
-                        startX: e.clientX,
-                        startY: e.clientY,
-                        baseDx: cur.dx,
-                        baseDy: cur.dy,
-                      };
+                  // La base ExoBrain está anclada. Con el candado activo no se inicia arrastre.
+                  dragState.current =
+                    isRoot || positionsLocked
+                      ? null
+                      : {
+                          nodeId: node.id,
+                          startX: e.clientX,
+                          startY: e.clientY,
+                          baseDx: cur.dx,
+                          baseDy: cur.dy,
+                        };
                   startLongPress(node.id, e.clientX, e.clientY);
                 }}
                 onPointerUp={cancelLongPress}
@@ -1476,6 +1487,19 @@ const GraphView = () => {
           aria-label="Alternar modo oscuro"
         >
           {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setPositionsLocked((v) => !v);
+          }}
+          className={`p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 transition-all flex items-center justify-center ${
+            positionsLocked ? "text-primary" : "text-muted-foreground"
+          }`}
+          title={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
+          aria-label={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
+        >
+          {positionsLocked ? <Lock size={16} /> : <LockOpen size={16} />}
         </button>
         <div className="relative">
           <button
