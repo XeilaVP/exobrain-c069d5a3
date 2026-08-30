@@ -481,7 +481,10 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
       )}
 
       {/* Body — scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-2 space-y-3" style={{ touchAction: "pan-y" }}>
+      <div
+        className={`flex-1 overflow-y-auto scrollbar-thin px-3 pb-2 space-y-3 ${isChecklistNote ? "pt-2" : "pt-0"}`}
+        style={{ touchAction: "pan-y" }}
+      >
         {isChecklistNote ? (
           <div>
             <h3 className="font-display text-base md:text-sm font-semibold text-foreground flex items-center gap-1.5 mb-2">
