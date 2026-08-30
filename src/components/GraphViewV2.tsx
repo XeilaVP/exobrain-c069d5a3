@@ -1323,7 +1323,86 @@ const GraphView = () => {
           })}
         </AnimatePresence>
       </div>
+      {/* Minimapa + volver a vista general */}
+      {minimapData && positionsWithOffsets.length > 0 && (
+        <div
+          data-no-pan
+          className="fixed bottom-3 left-3 z-30 w-[150px] h-[96px] md:w-[185px] md:h-[116px] rounded-xl border border-border/60 bg-card/80 backdrop-blur-md shadow-lg overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <svg
+            className="absolute inset-0 w-full h-full"
+            viewBox={`${minimapData.minX} ${minimapData.minY} ${minimapData.width} ${minimapData.height}`}
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Ramas simplificadas */}
+            {edges.map((edge, index) => {
+              const from = getPos(edge.from);
+              const to = getPos(edge.to);
+              if (!from || !to) return null;
 
+              const rootId = to.branchRootId || from.branchRootId;
+              const color = rootId ? visualForRoot(rootId).start : "220 12% 55%";
+
+              return (
+                <line
+                  key={`mini-edge-${index}`}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke={`hsl(${color})`}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  opacity={0.6}
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            })}
+
+            {/* Nodos */}
+            {positionsWithOffsets
+              .filter((node) => !node.isVirtual)
+              .map((node) => (
+                <circle
+                  key={`mini-node-${node.id}`}
+                  cx={node.x}
+                  cy={node.y}
+                  r={node.type === "root" ? 7 : node.isMain ? 5 : 3}
+                  fill={node.type === "root" ? "hsl(220 78% 58%)" : `hsl(${node.color})`}
+                />
+              ))}
+
+            {/* Zona que está viendo el usuario */}
+            <rect
+              x={minimapData.viewport.x}
+              y={minimapData.viewport.y}
+              width={minimapData.viewport.width}
+              height={minimapData.viewport.height}
+              fill="hsl(var(--primary) / 0.08)"
+              stroke="hsl(var(--primary))"
+              strokeWidth={1.5}
+              rx={8}
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+
+          {/* Volver a vista general */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsolatedRootId(null);
+              setFocusNoteId(null);
+              fitFullTree();
+            }}
+            className="absolute top-1.5 right-1.5 w-8 h-8 rounded-lg bg-background/85 border border-border/60 shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+            title="Volver a vista general"
+            aria-label="Volver a vista general"
+          >
+            <Maximize2 size={15} />
+          </button>
+        </div>
+      )}
       {isolatedRootId && (
         <button
           onClick={(e) => {
