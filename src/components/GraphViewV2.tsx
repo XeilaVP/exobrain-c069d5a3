@@ -29,6 +29,22 @@ import { Note } from "@/types/notes";
 import { useNavigate } from "react-router-dom";
 import { motifPath, pickMotif, type BranchMotif } from "@/lib/treeGeometry";
 
+/** Trazo de reserva cuando una arista no tiene motivo Bézier asignado. */
+const branchPath = (
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  kind: "trunk" | "branch" = "branch",
+) => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (kind === "trunk") {
+    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
+  }
+  const c1 = { x: from.x + dx * 0.35, y: from.y + dy * 0.15 };
+  const c2 = { x: from.x + dx * 0.65, y: from.y + dy * 0.85 };
+  return `M ${from.x} ${from.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${to.x} ${to.y}`;
+};
+
 type NodeType = "root" | "category" | "note";
 
 interface NodePos {
