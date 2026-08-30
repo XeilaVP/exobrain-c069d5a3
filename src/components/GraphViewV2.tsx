@@ -16,6 +16,7 @@ import {
   Download,
   Lock,
   LockOpen,
+  Maximize2,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
@@ -982,7 +983,36 @@ const GraphView = () => {
     });
     return out;
   }, [notes, visiblePositions]);
+  // Minimapa: representa siempre el árbol completo y la zona visible actual.
+  const minimapData = useMemo(() => {
+    const bounds = getNodesBounds(positionsWithOffsets);
+    if (!bounds || positionsWithOffsets.length === 0) return null;
 
+    const padding = 55;
+
+    const minX = bounds.minX - padding;
+    const minY = bounds.minY - padding;
+    const maxX = bounds.maxX + padding;
+    const maxY = bounds.maxY + padding;
+
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+
+    const zoom = viewZoom || 1;
+
+    return {
+      minX,
+      minY,
+      width,
+      height,
+      viewport: {
+        x: -pan.x / zoom,
+        y: -pan.y / zoom,
+        width: size.w / zoom,
+        height: size.h / zoom,
+      },
+    };
+  }, [getNodesBounds, positionsWithOffsets, pan.x, pan.y, viewZoom, size.w, size.h]);
   return (
     <div
       ref={containerRef}
