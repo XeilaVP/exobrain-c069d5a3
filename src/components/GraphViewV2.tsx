@@ -4,12 +4,6 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
-  Trash2,
-  Pencil,
-  Palette,
-  FileText,
-  ListChecks,
-  Pencil as Rename,
   User as UserIcon,
   LogOut,
   LogIn,
@@ -20,24 +14,18 @@ import {
   Moon,
   History,
   Download,
-  Move,
   Lock,
   LockOpen,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
 import BrainNameDialog from "./BrainNameDialog";
-import NameInputDialog from "./NameInputDialog";
 import CreateNodeDialog from "./CreateNodeDialog";
-import ColorPicker from "./ColorPicker";
-import EmojiPicker from "./EmojiPicker";
 import GoogleCalendarMenuItem from "./GoogleCalendarMenuItem";
 import HistoryDialog from "./HistoryDialog";
 import ExportDialog from "./ExportDialog";
-import MoveToDialog from "./MoveToDialog";
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 import { Note } from "@/types/notes";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { motifPath, pickMotif, type BranchMotif } from "@/lib/treeGeometry";
 
@@ -77,9 +65,6 @@ interface Edge {
 const ROOT_R = 30;
 const CAT_R = 22;
 const NOTE_R = 12;
-// Pulsación larga (menú contextual / crear nodo). Más larga para no chocar con gestos.
-const LONG_PRESS_MS = 800;
-const GESTURE_MOVE_THRESHOLD = 8;
 
 const TREE_BRANCH_PALETTE = [
   { start: "316 66% 68%", end: "316 73% 82%" }, // pink — Psico
@@ -124,29 +109,14 @@ const GraphView = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 1200, h: 800 });
   const [openPostIt, setOpenPostIt] = useState<{ noteId: string; x: number; y: number } | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
-  const [colorPickerCat, setColorPickerCat] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [iconPickerCat, setIconPickerCat] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [editingCat, setEditingCat] = useState<{ id: string; name: string } | null>(null);
-  const [movingNoteId, setMovingNoteId] = useState<string | null>(null);
-  const [pickTargetForId, setPickTargetForId] = useState<string | null>(null);
   const [showBrainDialog, setShowBrainDialog] = useState(false);
-  const [linkingNoteId, setLinkingNoteId] = useState<string | null>(null);
   const [focusNoteId, setFocusNoteId] = useState<string | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [newNoteDialog, setNewNoteDialog] = useState<{
-    parentNoteId: string | null;
-    type: "text" | "checklist";
-  } | null>(null);
+  const [isolatedRootId, setIsolatedRootId] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState<{ x: number; y: number } | null>(null);
-  const canvasLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canvasLongPressStart = useRef<{ x: number; y: number } | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [viewZoom, setViewZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
 
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didLongPress = useRef(false);
   const didDrag = useRef(false);
   const didPan = useRef(false);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,8 +126,6 @@ const GraphView = () => {
   const panRef = useRef({ x: 0, y: 0 });
   const worldRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
-  // Bloqueo de long-press mientras dura un gesto (2 dedos o desplazamiento).
-  const gestureBlockRef = useRef(false);
 
   // Drag offsets per node id (session-local, hasta que se guarden)
   const [offsets, setOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
@@ -172,8 +140,6 @@ const GraphView = () => {
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   // Punteros originados dentro de una zona [data-no-pan] (post-it): se ignoran en el canvas.
   const ignoredPointers = useRef<Set<number>>(new Set());
-  // Posición inicial de cada puntero, para detectar desplazamiento del gesto.
-  const pointerStarts = useRef<Map<number, { x: number; y: number }>>(new Map());
 
   const pinchState = useRef<{
     startDist: number;
@@ -572,6 +538,33 @@ const GraphView = () => {
     setPan({ x: targetX - treeCenterX * zoom, y: targetY - treeCenterY * zoom });
   }, [getNodesBounds, positionsWithOffsets, size.w, size.h]);
 
+  const fitNodesToView = useCallback(
+    (nodesToFit: NodePos[]) => {
+      const bounds = getNodesBounds(nodesToFit);
+      if (!bounds) return;
+      const isMobile = size.w < 640;
+      const sideMargin = isMobile ? 16 : 56;
+      const topMargin = isMobile ? 64 : 72;
+      const bottomMargin = isMobile ? 56 : 64;
+      const availableW = Math.max(1, size.w - sideMargin * 2);
+      const availableH = Math.max(1, size.h - topMargin - bottomMargin);
+      const treeW = Math.max(1, bounds.maxX - bounds.minX);
+      const treeH = Math.max(1, bounds.maxY - bounds.minY);
+      const zoom = Math.min(1.35, Math.max(0.3, Math.min(availableW / treeW, availableH / treeH)));
+      const centerX = (bounds.minX + bounds.maxX) / 2;
+      const centerY = (bounds.minY + bounds.maxY) / 2;
+      const nextPan = {
+        x: size.w / 2 - centerX * zoom,
+        y: (topMargin + (size.h - bottomMargin)) / 2 - centerY * zoom,
+      };
+      setViewZoom(zoom);
+      setPan(nextPan);
+      viewZoomRef.current = zoom;
+      panRef.current = nextPan;
+    },
+    [getNodesBounds, size.w, size.h],
+  );
+
   const layoutSignature = useMemo(() => {
     return positions.map((node) => `${node.id}:${Math.round(node.x)}:${Math.round(node.y)}`).join("|");
   }, [positions]);
@@ -665,46 +658,6 @@ const GraphView = () => {
   }, [zoomAt, commitView]);
 
 
-  // Long-press handlers
-  const startLongPress = useCallback(
-    (nodeId: string, clientX: number, clientY: number) => {
-      didLongPress.current = false;
-      // Durante un gesto (2 dedos o desplazamiento) no se programa long-press.
-      if (gestureBlockRef.current || pointersRef.current.size >= 2) return;
-      longPressTimer.current = setTimeout(() => {
-        longPressTimer.current = null;
-        if (gestureBlockRef.current || pointersRef.current.size >= 2 || pinchState.current) return;
-        didLongPress.current = true;
-        // If linking and this is a note
-        if (linkingNoteId && nodeId.startsWith("note-")) {
-          const targetId = nodeId.replace("note-", "");
-          if (targetId !== linkingNoteId) {
-            setConfirmDialog({
-              message: "¿Enlazar estas dos notas?",
-              onConfirm: () => {
-                linkNotes(linkingNoteId, targetId);
-                setLinkingNoteId(null);
-                setConfirmDialog(null);
-                toast.success("Notas enlazadas");
-              },
-            });
-          }
-          return;
-        }
-        setContextMenu({ nodeId, x: clientX, y: clientY });
-      }, LONG_PRESS_MS);
-    },
-    [linkingNoteId, linkNotes],
-  );
-
-
-  const cancelLongPress = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }, []);
-
   // Al soltar una nota arrastrada se guarda su posición absoluta y la de toda su
   // descendencia con el mismo desplazamiento: las hijas conservan exactamente la
   // colocación relativa que tenían respecto a su madre. Ninguna otra nota se toca.
@@ -747,29 +700,17 @@ const GraphView = () => {
 
   // Drag / pan / pinch pointer handlers (window-level)
   useEffect(() => {
-    const cancelAllLongPress = () => {
-      cancelLongPress();
-      if (canvasLongPressTimer.current) {
-        clearTimeout(canvasLongPressTimer.current);
-        canvasLongPressTimer.current = null;
-      }
-      canvasLongPressStart.current = null;
-    };
-
     const onDown = (e: PointerEvent) => {
-      // Eventos nacidos dentro del post-it no interactúan con el canvas.
       if (isInNoPan(e.target)) {
         ignoredPointers.current.add(e.pointerId);
         return;
       }
-      // Track any pointer that we haven't seen. If it becomes the 2nd active pointer
-      // and we don't yet have a pinch, initiate one from current pan/zoom state.
       if (pointersRef.current.has(e.pointerId)) return;
       pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      pointerStarts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      // El segundo puntero gana siempre: cancela cualquier drag de nodo y activa pinch/pan.
       if (pointersRef.current.size >= 2 && !pinchState.current) {
-        const pts = Array.from(pointersRef.current.values());
-        const [p1, p2] = pts;
+        const [p1, p2] = Array.from(pointersRef.current.values());
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
         pinchState.current = {
           startDist: dist,
@@ -781,33 +722,19 @@ const GraphView = () => {
         };
         panState.current = null;
         dragState.current = null;
-        // 2 dedos: se cancela cualquier long-press y queda bloqueado hasta soltar.
-        gestureBlockRef.current = true;
-        cancelAllLongPress();
         didPan.current = true;
         setIsPanning(true);
       }
     };
+
     const onMove = (e: PointerEvent) => {
       if (ignoredPointers.current.has(e.pointerId)) return;
-      // Update tracked pointer position
       if (pointersRef.current.has(e.pointerId)) {
         pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
       }
 
-      // Desplazamiento suficiente: se cancela y bloquea el long-press del gesto actual.
-      const start = pointerStarts.current.get(e.pointerId);
-      if (start && !gestureBlockRef.current) {
-        if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > GESTURE_MOVE_THRESHOLD) {
-          gestureBlockRef.current = true;
-          cancelAllLongPress();
-        }
-      }
-
-      // Pinch (two active pointers): zoom + pan following centroid
       if (pinchState.current && pointersRef.current.size >= 2) {
-        const pts = Array.from(pointersRef.current.values());
-        const [p1, p2] = pts;
+        const [p1, p2] = Array.from(pointersRef.current.values());
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
         const cx = (p1.x + p2.x) / 2;
         const cy = (p1.y + p2.y) / 2;
@@ -815,7 +742,6 @@ const GraphView = () => {
         if (ps.startDist > 0) {
           const scale = dist / ps.startDist;
           const newZoom = Math.max(0.3, Math.min(3, ps.startZoom * scale));
-          // World point under original centroid should stay under current centroid
           const worldX = (ps.centerX - ps.startPanX) / ps.startZoom;
           const worldY = (ps.centerY - ps.startPanY) / ps.startZoom;
           viewZoomRef.current = newZoom;
@@ -829,10 +755,7 @@ const GraphView = () => {
       if (ds) {
         const rawDx = e.clientX - ds.startX;
         const rawDy = e.clientY - ds.startY;
-        if (!didDrag.current && Math.hypot(rawDx, rawDy) > 5) {
-          didDrag.current = true;
-          cancelLongPress();
-        }
+        if (!didDrag.current && Math.hypot(rawDx, rawDy) > 5) didDrag.current = true;
         if (didDrag.current) {
           const zoom = viewZoomRef.current || 1;
           const dx = rawDx / zoom;
@@ -843,6 +766,7 @@ const GraphView = () => {
           }));
         }
       }
+
       const ps = panState.current;
       if (!ps) return;
       const rawDx = e.clientX - ps.startX;
@@ -853,39 +777,26 @@ const GraphView = () => {
         scheduleView();
       }
     };
+
     const onUp = (e: PointerEvent) => {
       if (ignoredPointers.current.has(e.pointerId)) {
         ignoredPointers.current.delete(e.pointerId);
         return;
       }
+
       pointersRef.current.delete(e.pointerId);
-      pointerStarts.current.delete(e.pointerId);
       const ds = dragState.current;
       dragState.current = null;
 
-      // Si se soltó tras un arrastre real, persistir la posición manual.
       if (ds && didDrag.current) {
         const off = offsetsRef.current[ds.nodeId];
         if (off) persistDraggedRef.current(ds.nodeId, off.dx, off.dy);
       }
 
-      // Cancel canvas long-press if pointer released before timer fired
-      if (canvasLongPressTimer.current) {
-        clearTimeout(canvasLongPressTimer.current);
-        canvasLongPressTimer.current = null;
-      }
-      canvasLongPressStart.current = null;
-
-      // End pinch when going below 2 pointers; do NOT continue as pan (1-finger canvas pan disabled on touch)
-      if (pinchState.current && pointersRef.current.size < 2) {
-        pinchState.current = null;
-      }
+      if (pinchState.current && pointersRef.current.size < 2) pinchState.current = null;
 
       if (pointersRef.current.size === 0) {
         panState.current = null;
-        pointerStarts.current.clear();
-        // Fin del gesto: se desbloquea el long-press y React se sincroniza una sola vez.
-        gestureBlockRef.current = false;
         commitView();
         setIsPanning(false);
       }
@@ -901,28 +812,37 @@ const GraphView = () => {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [cancelLongPress, scheduleView, commitView]);
+  }, [scheduleView, commitView]);
 
-  // Click handling with double-click detection
-  // - 1 clic en nota: activa/resalta su rama (focus).
-  // - 2 clics en nota: abre el post-it.
-  // - 1 clic en raíz: abre el diálogo de nombre del cerebro.
+  // Click simple = selección visual / doble click = abrir nota o aislar un tema principal.
+  const openIsolatedBranch = useCallback(
+    (rootId: string) => {
+      const noteIds = new Set<string>();
+      const visit = (id: string) => {
+        noteIds.add(id);
+        notes.filter((n) => n.parentNoteId === id).forEach((child) => visit(child.id));
+      };
+      visit(rootId);
+      const branchNodes = positionsWithOffsets.filter((node) => node.noteId && noteIds.has(node.noteId));
+      setIsolatedRootId(rootId);
+      setFocusNoteId(null);
+      setOpenPostIt(null);
+      fitNodesToView(branchNodes);
+    },
+    [notes, positionsWithOffsets, fitNodesToView],
+  );
+
   const handleNodeClick = useCallback(
     (nodeId: string, clientX: number, clientY: number) => {
       if (didDrag.current) {
         didDrag.current = false;
         return;
       }
-      if (didLongPress.current) {
-        didLongPress.current = false;
-        return;
-      }
-      if (contextMenu) {
-        setContextMenu(null);
+      if (didPan.current) {
+        didPan.current = false;
         return;
       }
 
-      // Root no activa ninguna rama: un solo clic abre su diálogo.
       if (nodeId === "root") {
         setShowBrainDialog(true);
         return;
@@ -930,69 +850,93 @@ const GraphView = () => {
 
       if (!nodeId.startsWith("note-")) return;
       const nId = nodeId.replace("note-", "");
+      const selected = notes.find((n) => n.id === nId);
+      if (!selected) return;
 
       if (clickTimer.current) {
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
-        // Doble clic: abrir la nota.
-        setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
+
+        if (!selected.parentNoteId) {
+          openIsolatedBranch(nId);
+        } else {
+          setSelectedNoteId(nId);
+          setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
+        }
         return;
       }
 
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
-        // If linking via single click on second note
-        if (linkingNoteId && linkingNoteId !== nId) {
-          setConfirmDialog({
-            message: "¿Enlazar estas dos notas?",
-            onConfirm: () => {
-              linkNotes(linkingNoteId, nId);
-              setLinkingNoteId(null);
-              setConfirmDialog(null);
-              toast.success("Notas enlazadas");
-            },
-          });
-          return;
-        }
-        // Clic simple: activar/resaltar la rama.
         setFocusNoteId(nId);
       }, 240);
     },
-    [contextMenu, linkingNoteId, linkNotes],
+    [notes, openIsolatedBranch, setSelectedNoteId],
   );
 
-  // Straight SVG segments: the layout creates the tree silhouette.
-  const branchPath = (from: NodePos, to: NodePos, kind: "trunk" | "branch" = "branch") => {
-    if (kind === "trunk") return `M ${from.x} ${from.y - ROOT_R * 0.55} L ${to.x} ${to.y}`;
-    return `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-  };
-
-  const widthForDepth = (depth: number, isMain = false) => {
-    if (isMain || depth <= 0) return 3;
-    if (depth <= 2) return 2.5;
-    return 2;
-  };
-
-  // Rama con protagonismo: subárbol de la raíz del nodo enfocado
+  // Selección visual:
+  // - nota normal: ella + hijas directas + notas enlazadas
+  // - tema principal: toda su rama jerárquica
   const focusIds = useMemo(() => {
     if (!focusNoteId) return null;
-    let cur = notes.find((n) => n.id === focusNoteId);
-    if (!cur) return null;
-    while (cur.parentNoteId) {
-      const p = notes.find((n) => n.id === cur!.parentNoteId);
-      if (!p) break;
-      cur = p;
+    const selected = notes.find((n) => n.id === focusNoteId);
+    if (!selected) return null;
+
+    const ids = new Set<string>();
+    ids.add(`note-${selected.id}`);
+
+    if (!selected.parentNoteId) {
+      ids.add("root");
+      ids.add("trunk-top");
+      ids.add(`attach-${selected.id}`);
+
+      const visit = (id: string) => {
+        notes
+          .filter((n) => n.parentNoteId === id)
+          .forEach((child) => {
+            ids.add(`note-${child.id}`);
+            visit(child.id);
+          });
+      };
+      visit(selected.id);
+    } else {
+      notes
+        .filter((n) => n.parentNoteId === selected.id)
+        .forEach((child) => ids.add(`note-${child.id}`));
+      selected.linkedNoteIds.forEach((linkedId) => ids.add(`note-${linkedId}`));
     }
-    const ids = new Set<string>(["root", "trunk-top", `attach-${cur.id}`]);
-    const visit = (id: string) => {
-      ids.add(`note-${id}`);
-      notes.filter((n) => n.parentNoteId === id).forEach((c) => visit(c.id));
-    };
-    visit(cur.id);
+
     return ids;
   }, [focusNoteId, notes]);
 
   const dimFor = useCallback((id: string) => (focusIds && !focusIds.has(id) ? 0.16 : 1), [focusIds]);
+
+  const isolatedNodeIds = useMemo(() => {
+    if (!isolatedRootId) return null;
+    const ids = new Set<string>();
+    const visit = (id: string) => {
+      ids.add(`note-${id}`);
+      notes.filter((n) => n.parentNoteId === id).forEach((child) => visit(child.id));
+    };
+    visit(isolatedRootId);
+    return ids;
+  }, [isolatedRootId, notes]);
+
+  const visiblePositions = useMemo(
+    () =>
+      isolatedNodeIds
+        ? positionsWithOffsets.filter((node) => isolatedNodeIds.has(node.id))
+        : positionsWithOffsets,
+    [isolatedNodeIds, positionsWithOffsets],
+  );
+
+  const visibleEdges = useMemo(
+    () =>
+      isolatedNodeIds
+        ? edges.filter((edge) => isolatedNodeIds.has(edge.from) && isolatedNodeIds.has(edge.to))
+        : edges,
+    [isolatedNodeIds, edges],
+  );
 
   const visualForRoot = useCallback(
     (rootId?: string) => {
@@ -1014,7 +958,7 @@ const GraphView = () => {
   // Link edges (horizontal between notes)
   const linkEdges = useMemo(() => {
     const out: { from: string; to: string }[] = [];
-    const ids = new Set(positions.map((p) => p.id));
+    const ids = new Set(visiblePositions.map((p) => p.id));
     notes.forEach((n) => {
       const fromKey = `note-${n.id}`;
       if (!ids.has(fromKey)) return;
@@ -1024,7 +968,7 @@ const GraphView = () => {
       });
     });
     return out;
-  }, [notes, positions]);
+  }, [notes, visiblePositions]);
 
   return (
     <div
@@ -1041,14 +985,11 @@ const GraphView = () => {
           "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
         );
 
-        // Always track pointer for pinch detection
+        // Siempre registrar el puntero: así el pinch puede empezar incluso sobre una nota.
         pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-        pointerStarts.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-        // Second pointer -> start pinch (cancel any in-flight pan, node drag or canvas long-press)
         if (pointersRef.current.size >= 2) {
-          const pts = Array.from(pointersRef.current.values());
-          const [p1, p2] = pts;
+          const [p1, p2] = Array.from(pointersRef.current.values());
           const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
           pinchState.current = {
             startDist: dist,
@@ -1060,35 +1001,12 @@ const GraphView = () => {
           };
           panState.current = null;
           dragState.current = null;
-          gestureBlockRef.current = true;
-          cancelLongPress();
-          if (canvasLongPressTimer.current) {
-            clearTimeout(canvasLongPressTimer.current);
-            canvasLongPressTimer.current = null;
-          }
-          canvasLongPressStart.current = null;
           didPan.current = true;
           setIsPanning(true);
           return;
         }
 
         if (!onBackground) return;
-
-        // Long-press on empty canvas -> open "create" dialog (works for touch and mouse)
-        if (gestureBlockRef.current) return;
-        canvasLongPressStart.current = { x: e.clientX, y: e.clientY };
-        if (canvasLongPressTimer.current) clearTimeout(canvasLongPressTimer.current);
-        canvasLongPressTimer.current = setTimeout(() => {
-          canvasLongPressTimer.current = null;
-          // Only trigger if user hasn't started panning/pinching
-          if (gestureBlockRef.current || didPan.current || pinchState.current || pointersRef.current.size >= 2) return;
-          setCreateDialog({ x: e.clientX, y: e.clientY });
-          // Cancel any pending pan so the click after release doesn't act
-          panState.current = null;
-          didPan.current = true;
-        }, LONG_PRESS_MS);
-
-        // Touch: 1-finger canvas pan is disabled (use 2 fingers). Only mouse/pen pans with one pointer.
         if (e.pointerType === "touch") return;
 
         panState.current = {
@@ -1113,21 +1031,9 @@ const GraphView = () => {
         if (onBackground) {
           setFocusNoteId(null);
           if (openPostIt) setOpenPostIt(null);
-          if (contextMenu) setContextMenu(null);
-          if (colorPickerCat) setColorPickerCat(null);
-          if (linkingNoteId) {
-            setLinkingNoteId(null);
-            toast.info("Enlace cancelado");
-          }
         }
       }}
     >
-      {/* Linking indicator */}
-      {linkingNoteId && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 bg-primary text-primary-foreground text-xs font-body px-3 py-1.5 rounded-full shadow-lg animate-pulse">
-          Selecciona otra nota para enlazar
-        </div>
-      )}
 
       {/* Tree world: SVG branches + nodes */}
       <div
@@ -1176,7 +1082,7 @@ const GraphView = () => {
             })}
           </defs>
 
-          {edges.map((edge, idx) => {
+          {visibleEdges.map((edge, idx) => {
             const from = getPos(edge.from);
             const to = getPos(edge.to);
             if (!from || !to) return null;
@@ -1229,7 +1135,7 @@ const GraphView = () => {
           })}
 
           {/* Punto de unión rama-tronco: suaviza el quiebre en cada intersección. */}
-          {positionsWithOffsets
+          {visiblePositions
             .filter((n) => n.isVirtual && n.id.startsWith("attach-"))
             .map((n) => (
               <circle
@@ -1264,7 +1170,7 @@ const GraphView = () => {
 
         {/* Labels are the nodes: small, readable and sitting directly on the ramifications. */}
         <AnimatePresence>
-          {positionsWithOffsets.map((node) => {
+          {visiblePositions.map((node) => {
             if (node.isVirtual) return null;
 
             const isRoot = node.type === "root";
@@ -1274,7 +1180,6 @@ const GraphView = () => {
             const dim = dimFor(node.id);
             const z = node.z ?? 1;
             const isFocused = !!focusIds && focusIds.has(node.id);
-            const isLinkSource = linkingNoteId && node.noteId === linkingNoteId;
             const showChildLabel = isMainNote || isFocused || labelVisibleAtDepth(node.depth);
             const baseScale = focusIds ? (isFocused ? (isMainNote ? 1.06 : 1.025) : 0.96) : 0.96 + z * 0.04;
             const visualOpacity = dim * (focusIds ? 1 : Math.max(0.68, z));
@@ -1305,7 +1210,6 @@ const GraphView = () => {
                   transition: "filter 300ms ease",
                 }}
                 onPointerDown={(e) => {
-                  e.stopPropagation();
                   didDrag.current = false;
                   const cur = offsets[node.id] || { dx: 0, dy: 0 };
                   // La base ExoBrain está anclada. Con el candado activo no se inicia arrastre.
@@ -1319,10 +1223,9 @@ const GraphView = () => {
                           baseDx: cur.dx,
                           baseDy: cur.dy,
                         };
-                  startLongPress(node.id, e.clientX, e.clientY);
+                  // No detenemos la propagación: el canvas debe detectar el segundo puntero
+                  // aunque el gesto empiece directamente sobre una nota.
                 }}
-                onPointerUp={cancelLongPress}
-                onPointerLeave={cancelLongPress}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleNodeClick(node.id, e.clientX, e.clientY);
@@ -1344,7 +1247,7 @@ const GraphView = () => {
                       isMainNote
                         ? "gap-2 px-3 py-1.5 text-[14px] font-semibold"
                         : "gap-1.5 px-2.5 py-1 text-[10px] font-medium"
-                    } ${isLinkSource ? "ring-2 ring-primary/50 ring-offset-2 ring-offset-background" : ""}`}
+                    }`}
                     style={{
                       borderColor: `hsl(${node.color} / ${isFocused ? 0.52 : isMainNote ? 0.3 : 0.16})`,
                       boxShadow: isFocused
@@ -1379,202 +1282,20 @@ const GraphView = () => {
         </AnimatePresence>
       </div>
 
-      {/* Context menu */}
-      <AnimatePresence>
-        {contextMenu && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed z-50 surface-panel rounded-2xl py-1 min-w-[170px]"
-            style={{ left: Math.min(contextMenu.x, size.w - 180), top: Math.min(contextMenu.y, size.h - 200) }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {contextMenu.nodeId === "root" && (
-              <button
-                onClick={() => {
-                  setShowBrainDialog(true);
-                  setContextMenu(null);
-                }}
-                className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-              >
-                <Rename size={12} />
-                Renombrar cerebro
-              </button>
-            )}
-
-            {contextMenu.nodeId.startsWith("note-") &&
-              (() => {
-                const nId = contextMenu.nodeId.replace("note-", "");
-                const note = notes.find((n) => n.id === nId);
-                if (!note) return null;
-                return (
-                  <>
-                    <button
-                      onClick={() => {
-                        setNewNoteDialog({ parentNoteId: nId, type: "text" });
-                        setContextMenu(null);
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                    >
-                      <FileText size={12} />
-                      Añadir hija (texto)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNewNoteDialog({ parentNoteId: nId, type: "checklist" });
-                        setContextMenu(null);
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                    >
-                      <ListChecks size={12} />
-                      Añadir hija (lista)
-                    </button>
-                    <button
-                      onClick={() => {
-                        setMovingNoteId(nId);
-                        setContextMenu(null);
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                    >
-                      <Move size={12} />
-                      Mover a...
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingCat({ id: nId, name: note.title });
-                        setContextMenu(null);
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                    >
-                      <Pencil size={12} />
-                      Renombrar
-                    </button>
-                    {!note.parentNoteId && (
-                      <button
-                        onClick={() => {
-                          setColorPickerCat({ id: nId, x: contextMenu.x, y: contextMenu.y });
-                          setContextMenu(null);
-                        }}
-                        className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                      >
-                        <Palette size={12} />
-                        Cambiar color
-                      </button>
-                    )}
-                    <button
-                      onClick={() => {
-                        setIconPickerCat({ id: nId, x: contextMenu.x, y: contextMenu.y });
-                        setContextMenu(null);
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                    >
-                      <span className="text-sm leading-none">🙂</span>Cambiar icono
-                    </button>
-                    <button
-                      onClick={() => {
-                        setLinkingNoteId(nId);
-                        setContextMenu(null);
-                        toast.info("Pulsa otra nota para enlazar");
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                    >
-                      🔗 Enlazar con otra nota
-                    </button>
-                    <button
-                      onClick={() => {
-                        setConfirmDialog({
-                          message: "¿Eliminar esta nota?",
-                          onConfirm: () => {
-                            deleteNote(nId);
-                            setConfirmDialog(null);
-                          },
-                        });
-                        setContextMenu(null);
-                      }}
-                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-destructive/10 flex items-center gap-2 font-body text-destructive"
-                    >
-                      <Trash2 size={12} />
-                      Eliminar
-                    </button>
-                  </>
-                );
-              })()}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Color picker (long-press category) */}
-      {colorPickerCat && (
-        <div
-          className="fixed z-50 surface-panel rounded-2xl p-3"
-          style={{ left: Math.min(colorPickerCat.x, size.w - 180), top: Math.min(colorPickerCat.y, size.h - 140) }}
-          onClick={(e) => e.stopPropagation()}
+      {isolatedRootId && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsolatedRootId(null);
+            setFocusNoteId(null);
+            fitFullTree();
+          }}
+          className="fixed top-3 left-3 z-40 surface-glass rounded-xl px-3 py-2 min-h-11 md:min-h-0 text-sm md:text-xs font-body text-foreground hover:bg-muted/40 transition-colors"
+          title="Volver al árbol completo"
         >
-          <p className="text-xs font-body text-muted-foreground mb-2">Elige un color</p>
-          <ColorPicker
-            value={notes.find((n) => n.id === colorPickerCat.id)?.color || DEFAULT_CATEGORY_COLOR}
-            onChange={(color) => {
-              updateNote(colorPickerCat.id, { color });
-              setColorPickerCat(null);
-            }}
-          />
-        </div>
+          ← Todo el árbol
+        </button>
       )}
-
-      {/* Icon picker (category) */}
-      {iconPickerCat && (
-        <div
-          className="fixed z-50 surface-panel rounded-2xl p-3"
-          style={{ left: Math.min(iconPickerCat.x, size.w - 280), top: Math.min(iconPickerCat.y, size.h - 260) }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p className="text-xs font-body text-muted-foreground mb-2">Elige un icono</p>
-          <EmojiPicker
-            value={notes.find((n) => n.id === iconPickerCat.id)?.icon || undefined}
-            onChange={(icon) => {
-              updateNote(iconPickerCat.id, { icon });
-              setIconPickerCat(null);
-            }}
-          />
-        </div>
-      )}
-
-      {/* Confirm dialog */}
-      <AnimatePresence>
-        {confirmDialog && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              className="bg-card border border-border rounded-xl shadow-2xl p-5 max-w-[280px] w-full mx-4 space-y-4"
-            >
-              <p className="text-sm font-body text-foreground text-center">{confirmDialog.message}</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setConfirmDialog(null)}
-                  className="flex-1 text-sm md:text-xs py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-lg bg-muted text-foreground font-body hover:bg-muted/80"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmDialog.onConfirm}
-                  className="flex-1 text-sm md:text-xs py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-lg bg-primary text-primary-foreground font-body hover:opacity-90"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Top-right controls */}
       <div className="fixed top-3 right-3 z-30 flex gap-2">
@@ -1764,46 +1485,6 @@ const GraphView = () => {
         </div>
       )}
 
-      {/* Edit category name */}
-      {editingCat && (
-        <div
-          className="fixed top-16 right-3 z-30 surface-panel rounded-2xl p-3 space-y-2 min-w-[200px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <input
-            value={editingCat.name}
-            onChange={(e) => setEditingCat({ ...editingCat, name: e.target.value })}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && editingCat.name.trim()) {
-                updateNote(editingCat.id, { title: editingCat.name.trim() });
-                setEditingCat(null);
-              }
-            }}
-            autoFocus
-            className="w-full bg-muted rounded text-base md:text-xs px-2 py-2.5 md:py-1.5 min-h-11 md:min-h-0 text-foreground outline-none font-body"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                if (editingCat.name.trim()) {
-                  updateNote(editingCat.id, { title: editingCat.name.trim() });
-                  setEditingCat(null);
-                }
-              }}
-              className="flex-1 bg-primary text-primary-foreground rounded text-sm md:text-xs py-2.5 md:py-1.5 min-h-11 md:min-h-0 font-medium"
-            >
-              Guardar
-            </button>
-            <button
-              onClick={() => setEditingCat(null)}
-              className="flex-1 bg-muted text-foreground rounded text-sm md:text-xs py-2.5 md:py-1.5 min-h-11 md:min-h-0"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Empty state */}
       {rootNotes.length === 0 && !loading && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -1850,28 +1531,6 @@ const GraphView = () => {
         )}
       </AnimatePresence>
 
-      <NameInputDialog
-        open={newNoteDialog !== null}
-        title={
-          newNoteDialog?.type === "checklist"
-            ? newNoteDialog?.parentNoteId
-              ? "Nueva lista hija"
-              : "Nueva lista"
-            : newNoteDialog?.parentNoteId
-              ? "Nueva nota hija"
-              : "Nueva nota"
-        }
-        placeholder={newNoteDialog?.type === "checklist" ? "Nombre de la lista..." : "Nombre de la nota..."}
-        onSubmit={async (name) => {
-          if (!newNoteDialog) return;
-          const { parentNoteId, type } = newNoteDialog;
-          setNewNoteDialog(null);
-          const created = await addNote(null, parentNoteId, type);
-          if (created) updateNote(created.id, { title: name });
-        }}
-        onCancel={() => setNewNoteDialog(null)}
-      />
-
       <CreateNodeDialog
         open={createDialog !== null}
         notes={notes}
@@ -1884,19 +1543,7 @@ const GraphView = () => {
         onCancel={() => setCreateDialog(null)}
       />
 
-      <MoveToDialog
-        open={movingNoteId !== null}
-        noteId={movingNoteId}
-        notes={notes}
-        brainName={brainName}
-        onMove={async (targetId) => {
-          if (!movingNoteId) return;
-          const id = movingNoteId;
-          setMovingNoteId(null);
-          await moveNote(id, targetId);
-        }}
-        onCancel={() => setMovingNoteId(null)}
-      />
+
     </div>
   );
 };

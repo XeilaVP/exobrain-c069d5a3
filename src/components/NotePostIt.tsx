@@ -1,6 +1,6 @@
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion, Reorder, useDragControls } from "framer-motion";
@@ -10,6 +10,8 @@ import NameInputDialog from "./NameInputDialog";
 import TaskSheet from "./TaskSheet";
 import EmojiPicker from "./EmojiPicker";
 import MoveToDialog from "./MoveToDialog";
+import ColorPicker from "./ColorPicker";
+import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { es } from "date-fns/locale";
@@ -218,9 +220,11 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
   const [linkSearch, setLinkSearch] = useState("");
   const [maximized, setMaximized] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
-  
-  
+  const [showNoteMenu, setShowNoteMenu] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { attachments, uploading, uploadFile, deleteAttachment } = useNoteAttachments(noteId);
   const [newChildDialog, setNewChildDialog] = useState<null | "text" | "checklist">(null);
@@ -318,6 +322,92 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
             {maximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
         )}
+
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowNoteMenu((v) => !v)}
+            aria-label="Opciones de nota"
+            title="Opciones"
+            className="rounded-md hover:bg-muted text-muted-foreground hover:text-foreground min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center"
+          >
+            <MoreHorizontal size={isMobile ? 22 : 16} />
+          </button>
+
+          {showNoteMenu && (
+            <div
+              className="absolute right-0 top-11 md:top-7 z-[80] min-w-[210px] rounded-xl border border-border bg-popover py-1 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  titleInputRef.current?.focus();
+                  titleInputRef.current?.select();
+                  setShowNoteMenu(false);
+                }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Type size={14} /> Renombrar
+              </button>
+              <button
+                onClick={() => { setNewChildDialog("text"); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Type size={14} /> Añadir hija
+              </button>
+              <button
+                onClick={() => { setNewChildDialog("checklist"); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <ListChecks size={14} /> Añadir lista hija
+              </button>
+              <button
+                onClick={() => { setShowMoveDialog(true); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Move size={14} /> Mover a...
+              </button>
+              <button
+                onClick={() => { setShowIconPicker(true); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <span className="text-sm leading-none">🙂</span> Cambiar icono
+              </button>
+              {!note.parentNoteId && (
+                <button
+                  onClick={() => { setShowColorPicker(true); setShowNoteMenu(false); }}
+                  className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+                >
+                  <Palette size={14} /> Cambiar color
+                </button>
+              )}
+              <button
+                onClick={() => { setShowLinkPicker(true); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Link2 size={14} /> Enlazar con otra nota
+              </button>
+              <button
+                onClick={() => { fileInputRef.current?.click(); setShowNoteMenu(false); }}
+                disabled={uploading}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 disabled:opacity-50"
+              >
+                <Paperclip size={14} /> {uploading ? "Subiendo..." : "Añadir archivo"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowNoteMenu(false);
+                  deleteNote(noteId);
+                  onClose();
+                  toast.success("Nota eliminada");
+                }}
+                className="w-full px-3 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
+              >
+                <Trash2 size={14} /> Eliminar
+              </button>
+            </div>
+          )}
+        </div>
+
         <button onClick={onClose} aria-label="Cerrar" className="rounded-md hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center">
           <X size={isMobile ? 22 : 16} />
         </button>
@@ -326,28 +416,19 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
       {/* Title + actions */}
       <div className="px-3 pt-2 shrink-0">
         <div className="flex items-start gap-2">
-          <button
-            onClick={() => setShowIconPicker(v => !v)}
-            aria-label="Cambiar icono"
-            className="shrink-0 h-10 w-10 rounded-md hover:bg-muted flex items-center justify-center text-xl"
-            title="Cambiar icono"
+          <div
+            className="shrink-0 h-10 w-10 rounded-md flex items-center justify-center text-xl"
+            aria-hidden="true"
           >
             {note.icon || (isChecklistNote ? "☑️" : "📝")}
-          </button>
+          </div>
           <input
+            ref={titleInputRef}
             value={note.title}
             onChange={e => updateNote(noteId, { title: e.target.value })}
             className="flex-1 min-w-0 font-display text-xl font-bold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
             placeholder="Título..."
           />
-          <button
-            onClick={() => setShowMoveDialog(true)}
-            className="shrink-0 max-w-[45%] flex items-center gap-1 text-xs bg-muted text-muted-foreground rounded px-2 py-1.5 hover:bg-muted/70 font-body truncate"
-            title="Mover a..."
-          >
-            <Move size={12} className="shrink-0" />
-            <span className="truncate">{parentNote ? parentNote.title : (brainName || "ExoBrain")}</span>
-          </button>
         </div>
         {showIconPicker && (
           <div className="mt-2 bg-popover border border-border rounded-lg shadow-lg p-2 relative z-10">
@@ -358,31 +439,26 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
             />
           </div>
         )}
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-
-          <button onClick={() => setShowLinkPicker(!showLinkPicker)}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0">
-            <Link2 size={14} className="md:size-2.5" />Enlazar
-          </button>
-          <button onClick={() => setNewChildDialog("text")}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0" title="Añadir nota hija de texto">
-            <Type size={14} className="md:size-2.5" />Hija
-          </button>
-          <button onClick={() => setNewChildDialog("checklist")}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0" title="Añadir lista hija">
-            <ListChecks size={14} className="md:size-2.5" />Lista
-          </button>
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0">
-            <Paperclip size={14} className="md:size-2.5" />{uploading ? "..." : "Archivo"}
-          </button>
-          <input ref={fileInputRef} type="file" className="hidden" multiple
-            onChange={e => { if (e.target.files) { Array.from(e.target.files).forEach(uploadFile); e.target.value = ""; } }} />
-          <button onClick={() => { deleteNote(noteId); onClose(); toast.success("Nota eliminada"); }}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-destructive hover:text-destructive/80 font-body ml-auto min-h-11 md:min-h-0 px-2 md:px-0">
-            <Trash2 size={14} className="md:size-2.5" />Borrar
-          </button>
-        </div>
+        {showColorPicker && !note.parentNoteId && (
+          <div className="mt-2 bg-popover border border-border rounded-lg shadow-lg p-2 relative z-10">
+            <ColorPicker
+              value={note.color || DEFAULT_CATEGORY_COLOR}
+              onChange={(color) => { updateNote(noteId, { color }); setShowColorPicker(false); }}
+            />
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          onChange={e => {
+            if (e.target.files) {
+              Array.from(e.target.files).forEach(uploadFile);
+              e.target.value = "";
+            }
+          }}
+        />
       </div>
 
 
