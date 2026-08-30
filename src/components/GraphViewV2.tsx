@@ -29,7 +29,13 @@ import { Note } from "@/types/notes";
 import { useNavigate } from "react-router-dom";
 import { motifPath, pickMotif, type BranchMotif } from "@/lib/treeGeometry";
 
-/** Trazo de reserva cuando una arista no tiene motivo Bézier asignado. */
+/** Grosor de rama según profundidad. */
+const widthForDepth = (depth: number, isMain?: boolean) => {
+  if (isMain) return 2.6;
+  return Math.max(0.8, 2.2 - depth * 0.35);
+};
+
+
 const branchPath = (
   from: { x: number; y: number },
   to: { x: number; y: number },
