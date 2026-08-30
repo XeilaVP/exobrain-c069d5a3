@@ -188,6 +188,8 @@ export type Database = {
           parent_note_id: string | null
           pos_dx: number | null
           pos_dy: number | null
+          pos_x: number | null
+          pos_y: number | null
           restored_from_version_id: string | null
           source: string
           title: string
@@ -209,6 +211,8 @@ export type Database = {
           parent_note_id?: string | null
           pos_dx?: number | null
           pos_dy?: number | null
+          pos_x?: number | null
+          pos_y?: number | null
           restored_from_version_id?: string | null
           source?: string
           title?: string
@@ -230,6 +234,8 @@ export type Database = {
           parent_note_id?: string | null
           pos_dx?: number | null
           pos_dy?: number | null
+          pos_x?: number | null
+          pos_y?: number | null
           restored_from_version_id?: string | null
           source?: string
           title?: string
@@ -252,6 +258,8 @@ export type Database = {
           parent_note_id: string | null
           pos_dx: number | null
           pos_dy: number | null
+          pos_x: number | null
+          pos_y: number | null
           title: string
           updated_at: string
           user_id: string
@@ -270,6 +278,8 @@ export type Database = {
           parent_note_id?: string | null
           pos_dx?: number | null
           pos_dy?: number | null
+          pos_x?: number | null
+          pos_y?: number | null
           title?: string
           updated_at?: string
           user_id: string
@@ -288,6 +298,8 @@ export type Database = {
           parent_note_id?: string | null
           pos_dx?: number | null
           pos_dy?: number | null
+          pos_x?: number | null
+          pos_y?: number | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -313,6 +325,8 @@ export type Database = {
         Row: {
           avatar_url: string | null
           brain_name: string
+          brain_pos_x: number | null
+          brain_pos_y: number | null
           created_at: string
           display_name: string | null
           google_calendar_connected: boolean
@@ -324,6 +338,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           brain_name?: string
+          brain_pos_x?: number | null
+          brain_pos_y?: number | null
           created_at?: string
           display_name?: string | null
           google_calendar_connected?: boolean
@@ -335,6 +351,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           brain_name?: string
+          brain_pos_x?: number | null
+          brain_pos_y?: number | null
           created_at?: string
           display_name?: string | null
           google_calendar_connected?: boolean
@@ -366,6 +384,8 @@ export type Database = {
           parent_note_id: string | null
           pos_dx: number | null
           pos_dy: number | null
+          pos_x: number | null
+          pos_y: number | null
           title: string
           updated_at: string
           user_id: string
@@ -393,6 +413,8 @@ export type Database = {
           parent_note_id: string | null
           pos_dx: number | null
           pos_dy: number | null
+          pos_x: number | null
+          pos_y: number | null
           title: string
           updated_at: string
           user_id: string
@@ -420,6 +442,8 @@ export type Database = {
           parent_note_id: string | null
           pos_dx: number | null
           pos_dy: number | null
+          pos_x: number | null
+          pos_y: number | null
           title: string
           updated_at: string
           user_id: string

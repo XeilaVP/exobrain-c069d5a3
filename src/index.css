@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -52,23 +52,23 @@
     /* Depth / glass system */
     --glass: 0 0% 100% / 0.72;
     --glass-strong: 0 0% 100% / 0.88;
-    --canvas-wash: radial-gradient(1200px 800px at 50% 60%, hsl(258 72% 62% / 0.07), transparent 70%),
-                   radial-gradient(900px 700px at 15% 20%, hsl(190 70% 55% / 0.06), transparent 70%),
-                   linear-gradient(180deg, hsl(220 40% 99%), hsl(225 30% 97%));
+    --canvas-wash:
+      radial-gradient(1200px 800px at 50% 60%, hsl(258 72% 62% / 0.07), transparent 70%),
+      radial-gradient(900px 700px at 15% 20%, hsl(190 70% 55% / 0.06), transparent 70%),
+      linear-gradient(180deg, hsl(220 40% 99%), hsl(225 30% 97%));
     --shadow-soft: 0 1px 2px hsl(225 25% 20% / 0.04), 0 8px 24px -12px hsl(225 25% 20% / 0.12);
     --shadow-float: 0 2px 6px hsl(225 25% 20% / 0.06), 0 24px 48px -20px hsl(225 25% 20% / 0.22);
     --shadow-node: 0 2px 6px hsl(225 25% 20% / 0.14);
 
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'Inter', sans-serif;
+    --font-display: "Playfair Display", serif;
+    --font-body: "Inter", sans-serif;
   }
 
-
   .dark {
-    --background: 232 20% 9%;
+    --background: 0 0% 8%;
     --foreground: 225 25% 94%;
 
-    --card: 232 18% 13%;
+    --card: 232 14.18% 30.76%;
     --card-foreground: 225 25% 94%;
 
     --popover: 232 18% 12%;
@@ -108,15 +108,15 @@
 
     --glass: 232 18% 14% / 0.72;
     --glass-strong: 232 18% 14% / 0.9;
-    --canvas-wash: radial-gradient(1200px 800px at 50% 60%, hsl(258 78% 70% / 0.12), transparent 70%),
-                   radial-gradient(900px 700px at 15% 20%, hsl(190 70% 58% / 0.08), transparent 70%),
-                   linear-gradient(180deg, hsl(232 20% 10%), hsl(232 20% 8%));
+    --canvas-wash:
+      radial-gradient(1200px 800px at 50% 60%, hsl(258 78% 70% / 0.12), transparent 70%),
+      radial-gradient(900px 700px at 15% 20%, hsl(190 70% 58% / 0.08), transparent 70%),
+      linear-gradient(180deg, hsl(232 20% 10%), hsl(232 20% 8%));
     --shadow-soft: 0 1px 2px hsl(0 0% 0% / 0.3), 0 8px 24px -12px hsl(0 0% 0% / 0.55);
     --shadow-float: 0 2px 6px hsl(0 0% 0% / 0.35), 0 24px 48px -20px hsl(0 0% 0% / 0.6);
     --shadow-node: 0 2px 8px hsl(0 0% 0% / 0.45);
   }
 }
-
 
 @layer base {
   * {
@@ -128,7 +128,12 @@
     font-family: var(--font-body);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
   }
 }
@@ -154,15 +159,20 @@
     box-shadow: var(--shadow-float);
   }
 
-  .shadow-soft { box-shadow: var(--shadow-soft); }
-  .shadow-float { box-shadow: var(--shadow-float); }
-  .shadow-node { box-shadow: var(--shadow-node); }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-float {
+    box-shadow: var(--shadow-float);
+  }
+  .shadow-node {
+    box-shadow: var(--shadow-node);
+  }
 
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--border)) transparent;
   }
-
 
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
@@ -179,7 +189,7 @@
 
   /* Rich text editor (TipTap) styles */
   .prose-editor h1 {
-    font-family: 'Playfair Display', serif;
+    font-family: "Playfair Display", serif;
     font-size: 1.35rem;
     font-weight: 700;
     line-height: 1.2;
@@ -187,7 +197,7 @@
     color: hsl(var(--foreground));
   }
   .prose-editor h2 {
-    font-family: 'Playfair Display', serif;
+    font-family: "Playfair Display", serif;
     font-size: 1.1rem;
     font-weight: 600;
     line-height: 1.3;
@@ -200,12 +210,29 @@
     margin: 0.4rem 0 0.2rem;
     color: hsl(var(--foreground));
   }
-  .prose-editor p { margin: 0.25rem 0; }
-  .prose-editor strong { font-weight: 600; color: hsl(var(--foreground)); }
-  .prose-editor em { font-style: italic; }
-  .prose-editor ul { list-style: disc; padding-left: 1.25rem; margin: 0.25rem 0; }
-  .prose-editor ol { list-style: decimal; padding-left: 1.25rem; margin: 0.25rem 0; }
-  .prose-editor li { margin: 0.1rem 0; }
+  .prose-editor p {
+    margin: 0.25rem 0;
+  }
+  .prose-editor strong {
+    font-weight: 600;
+    color: hsl(var(--foreground));
+  }
+  .prose-editor em {
+    font-style: italic;
+  }
+  .prose-editor ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin: 0.25rem 0;
+  }
+  .prose-editor ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+    margin: 0.25rem 0;
+  }
+  .prose-editor li {
+    margin: 0.1rem 0;
+  }
   .prose-editor blockquote {
     border-left: 3px solid hsl(var(--primary) / 0.5);
     padding-left: 0.75rem;
@@ -227,7 +254,10 @@
     overflow-x: auto;
     margin: 0.5rem 0;
   }
-  .prose-editor pre code { background: transparent; padding: 0; }
+  .prose-editor pre code {
+    background: transparent;
+    padding: 0;
+  }
   .prose-editor p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
     float: left;
@@ -257,7 +287,10 @@
     accent-color: hsl(var(--primary));
     cursor: pointer;
   }
-  .prose-editor ul[data-type="taskList"] li > div { flex: 1; min-width: 0; }
+  .prose-editor ul[data-type="taskList"] li > div {
+    flex: 1;
+    min-width: 0;
+  }
   .prose-editor ul[data-type="taskList"] li[data-checked="true"] > div {
     color: hsl(var(--muted-foreground));
     text-decoration: line-through;
