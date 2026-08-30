@@ -1016,7 +1016,9 @@ const GraphView = () => {
   return (
     <div
       ref={containerRef}
-      className="flex-1 h-full w-full overflow-hidden relative select-none bg-background"
+      className={`flex-1 h-full w-full overflow-hidden relative select-none bg-background ${
+        isPanning ? "cursor-grabbing" : "cursor-grab"
+      }`}
       style={{
         touchAction: "none",
       }}
