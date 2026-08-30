@@ -219,6 +219,8 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
   const [maximized, setMaximized] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [showMoveDialog, setShowMoveDialog] = useState(false);
+  const [showNoteMenu, setShowNoteMenu] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -284,9 +286,7 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       className="fixed z-50 surface-panel rounded-2xl flex flex-col overflow-hidden"
       style={{ left, top, width: panelWidth, height: panelHeight }}
-      data-no-pan
       onClick={e => e.stopPropagation()}
-
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
@@ -318,6 +318,92 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
             {maximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
         )}
+
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowNoteMenu((v) => !v)}
+            aria-label="Opciones de nota"
+            title="Opciones"
+            className="rounded-md hover:bg-muted text-muted-foreground hover:text-foreground min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center"
+          >
+            <MoreHorizontal size={isMobile ? 22 : 16} />
+          </button>
+
+          {showNoteMenu && (
+            <div
+              className="absolute right-0 top-11 md:top-7 z-[80] min-w-[210px] rounded-xl border border-border bg-popover py-1 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  titleInputRef.current?.focus();
+                  titleInputRef.current?.select();
+                  setShowNoteMenu(false);
+                }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Type size={14} />
+                Renombrar
+              </button>
+              <button
+                onClick={() => { setNewChildDialog("text"); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Type size={14} />
+                Añadir hija
+              </button>
+              <button
+                onClick={() => { setNewChildDialog("checklist"); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <ListChecks size={14} />
+                Añadir lista hija
+              </button>
+              <button
+                onClick={() => { setShowMoveDialog(true); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Move size={14} />
+                Mover a...
+              </button>
+              <button
+                onClick={() => { setShowIconPicker(true); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <span className="text-sm leading-none">🙂</span>
+                Cambiar icono
+              </button>
+              <button
+                onClick={() => { setShowLinkPicker(true); setShowNoteMenu(false); }}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
+              >
+                <Link2 size={14} />
+                Enlazar con otra nota
+              </button>
+              <button
+                onClick={() => { fileInputRef.current?.click(); setShowNoteMenu(false); }}
+                disabled={uploading}
+                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2 disabled:opacity-50"
+              >
+                <Paperclip size={14} />
+                {uploading ? "Subiendo..." : "Añadir archivo"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowNoteMenu(false);
+                  deleteNote(noteId);
+                  onClose();
+                  toast.success("Nota eliminada");
+                }}
+                className="w-full px-3 py-2.5 text-left text-sm text-destructive hover:bg-destructive/10 flex items-center gap-2"
+              >
+                <Trash2 size={14} />
+                Eliminar
+              </button>
+            </div>
+          )}
+        </div>
+
         <button onClick={onClose} aria-label="Cerrar" className="rounded-md hover:bg-muted text-muted-foreground hover:text-foreground shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1 flex items-center justify-center">
           <X size={isMobile ? 22 : 16} />
         </button>
@@ -335,19 +421,12 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
             {note.icon || (isChecklistNote ? "☑️" : "📝")}
           </button>
           <input
+            ref={titleInputRef}
             value={note.title}
             onChange={e => updateNote(noteId, { title: e.target.value })}
             className="flex-1 min-w-0 font-display text-xl font-bold bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
             placeholder="Título..."
           />
-          <button
-            onClick={() => setShowMoveDialog(true)}
-            className="shrink-0 max-w-[45%] flex items-center gap-1 text-xs bg-muted text-muted-foreground rounded px-2 py-1.5 hover:bg-muted/70 font-body truncate"
-            title="Mover a..."
-          >
-            <Move size={12} className="shrink-0" />
-            <span className="truncate">{parentNote ? parentNote.title : (brainName || "ExoBrain")}</span>
-          </button>
         </div>
         {showIconPicker && (
           <div className="mt-2 bg-popover border border-border rounded-lg shadow-lg p-2 relative z-10">
@@ -358,31 +437,18 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
             />
           </div>
         )}
-        <div className="flex items-center gap-2 mt-2 flex-wrap">
-
-          <button onClick={() => setShowLinkPicker(!showLinkPicker)}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0">
-            <Link2 size={14} className="md:size-2.5" />Enlazar
-          </button>
-          <button onClick={() => setNewChildDialog("text")}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0" title="Añadir nota hija de texto">
-            <Type size={14} className="md:size-2.5" />Hija
-          </button>
-          <button onClick={() => setNewChildDialog("checklist")}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0" title="Añadir lista hija">
-            <ListChecks size={14} className="md:size-2.5" />Lista
-          </button>
-          <button onClick={() => fileInputRef.current?.click()} disabled={uploading}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground hover:text-foreground font-body min-h-11 md:min-h-0 px-2 md:px-0">
-            <Paperclip size={14} className="md:size-2.5" />{uploading ? "..." : "Archivo"}
-          </button>
-          <input ref={fileInputRef} type="file" className="hidden" multiple
-            onChange={e => { if (e.target.files) { Array.from(e.target.files).forEach(uploadFile); e.target.value = ""; } }} />
-          <button onClick={() => { deleteNote(noteId); onClose(); toast.success("Nota eliminada"); }}
-            className="flex items-center gap-1 text-xs md:text-[10px] text-destructive hover:text-destructive/80 font-body ml-auto min-h-11 md:min-h-0 px-2 md:px-0">
-            <Trash2 size={14} className="md:size-2.5" />Borrar
-          </button>
-        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          multiple
+          onChange={e => {
+            if (e.target.files) {
+              Array.from(e.target.files).forEach(uploadFile);
+              e.target.value = "";
+            }
+          }}
+        />
       </div>
 
 
@@ -392,7 +458,7 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
             <input value={linkSearch} onChange={e => setLinkSearch(e.target.value)}
               placeholder="Buscar nota..." autoFocus
               className="w-full text-base md:text-[10px] bg-background rounded px-2 py-2 md:py-1 outline-none text-foreground font-body" />
-            <div className="max-h-32 md:max-h-24 overflow-y-auto space-y-0.5 scrollbar-thin" style={{ touchAction: "pan-y" }}>
+            <div className="max-h-32 md:max-h-24 overflow-y-auto space-y-0.5 scrollbar-thin">
               {availableToLink.slice(0, 6).map(n => (
                 <button key={n.id} onClick={() => { linkNotes(noteId, n.id); setShowLinkPicker(false); setLinkSearch(""); }}
                   className="w-full text-left text-sm md:text-[10px] px-2 py-2 md:py-1 rounded hover:bg-background/80 text-foreground font-body flex items-center gap-1.5 min-h-11 md:min-h-0">
@@ -405,7 +471,7 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
       )}
 
       {/* Body — scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-2 space-y-3" style={{ touchAction: "pan-y" }}>
+      <div className="flex-1 overflow-y-auto scrollbar-thin px-3 py-2 space-y-3">
         {isChecklistNote ? (
           <div>
             <h3 className="font-display text-base md:text-sm font-semibold text-foreground flex items-center gap-1.5 mb-2">
