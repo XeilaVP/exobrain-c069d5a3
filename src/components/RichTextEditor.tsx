@@ -55,8 +55,11 @@ const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps)
   if (!editor) return null;
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-0.5 flex-wrap sticky top-0 bg-card/95 backdrop-blur z-10 py-1 -mx-1 px-1 border-b border-border">
+    <div className="flex flex-col">
+      <div
+        className="flex items-center gap-0.5 flex-wrap sticky top-0 z-10 py-1 -mx-1 px-1 backdrop-blur"
+        style={{ backgroundColor: "hsl(var(--glass-strong) / 0.96)" }}
+      >
         <ToolbarBtn active={editor.isActive("heading", { level: 1 })}
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} title="Título">
           <Heading1 size={18} className="md:size-3.5" />
