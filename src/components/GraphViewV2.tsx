@@ -35,7 +35,6 @@ const widthForDepth = (depth: number, isMain?: boolean) => {
   return Math.max(0.8, 2.2 - depth * 0.35);
 };
 
-
 const branchPath = (
   from: { x: number; y: number },
   to: { x: number; y: number },
@@ -679,7 +678,6 @@ const GraphView = () => {
     };
   }, [zoomAt, commitView]);
 
-
   // Al soltar una nota arrastrada se guarda su posición absoluta y la de toda su
   // descendencia con el mismo desplazamiento: las hijas conservan exactamente la
   // colocación relativa que tenían respecto a su madre. Ninguna otra nota se toca.
@@ -717,8 +715,7 @@ const GraphView = () => {
   persistDraggedRef.current = persistDragged;
 
   // Zona excluida: el post-it y cualquier overlay marcado con data-no-pan.
-  const isInNoPan = (target: EventTarget | null) =>
-    !!(target instanceof Element && target.closest("[data-no-pan]"));
+  const isInNoPan = (target: EventTarget | null) => !!(target instanceof Element && target.closest("[data-no-pan]"));
 
   // Drag / pan / pinch pointer handlers (window-level)
   useEffect(() => {
@@ -922,9 +919,7 @@ const GraphView = () => {
       };
       visit(selected.id);
     } else {
-      notes
-        .filter((n) => n.parentNoteId === selected.id)
-        .forEach((child) => ids.add(`note-${child.id}`));
+      notes.filter((n) => n.parentNoteId === selected.id).forEach((child) => ids.add(`note-${child.id}`));
       selected.linkedNoteIds.forEach((linkedId) => ids.add(`note-${linkedId}`));
     }
 
@@ -946,17 +941,13 @@ const GraphView = () => {
 
   const visiblePositions = useMemo(
     () =>
-      isolatedNodeIds
-        ? positionsWithOffsets.filter((node) => isolatedNodeIds.has(node.id))
-        : positionsWithOffsets,
+      isolatedNodeIds ? positionsWithOffsets.filter((node) => isolatedNodeIds.has(node.id)) : positionsWithOffsets,
     [isolatedNodeIds, positionsWithOffsets],
   );
 
   const visibleEdges = useMemo(
     () =>
-      isolatedNodeIds
-        ? edges.filter((edge) => isolatedNodeIds.has(edge.from) && isolatedNodeIds.has(edge.to))
-        : edges,
+      isolatedNodeIds ? edges.filter((edge) => isolatedNodeIds.has(edge.from) && isolatedNodeIds.has(edge.to)) : edges,
     [isolatedNodeIds, edges],
   );
 
@@ -1056,7 +1047,6 @@ const GraphView = () => {
         }
       }}
     >
-
       {/* Tree world: SVG branches + nodes */}
       <div
         ref={worldRef}
@@ -1315,7 +1305,7 @@ const GraphView = () => {
           className="fixed top-3 left-3 z-40 surface-glass rounded-xl px-3 py-2 min-h-11 md:min-h-0 text-sm md:text-xs font-body text-foreground hover:bg-muted/40 transition-colors"
           title="Volver al árbol completo"
         >
-          ← Todo el árbol
+          ← Volver
         </button>
       )}
 
@@ -1564,8 +1554,6 @@ const GraphView = () => {
         }}
         onCancel={() => setCreateDialog(null)}
       />
-
-
     </div>
   );
 };
