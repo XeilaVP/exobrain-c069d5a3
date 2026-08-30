@@ -48,7 +48,7 @@ interface NotesContextType {
   setActiveView: (v: "notes" | "graph") => void;
   setSelectedCategoryId: (id: string | null) => void;
   setSelectedNoteId: (id: string | null) => void;
-  addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null, pos?: { x: number; y: number } | null) => Promise<Note | null>;
+  addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null) => Promise<Note | null>;
   moveNote: (noteId: string, newParentId: string | null) => Promise<boolean>;
   getDescendantIds: (noteId: string) => Set<string>;
   canMoveTo: (noteId: string, targetId: string | null) => boolean;
@@ -85,10 +85,6 @@ interface NotesContextType {
   updateNotePosition: (id: string, dx: number | null, dy: number | null) => Promise<void>;
   saveNotePositions: (entries: { id: string; dx: number; dy: number }[]) => Promise<void>;
   clearAllPositions: () => Promise<void>;
-  /** Guarda posiciones absolutas fijas (x/y) de una o varias notas. */
-  saveAbsolutePositions: (entries: { id: string; x: number; y: number }[]) => Promise<void>;
-  brainPos: { x: number; y: number } | null;
-  setBrainPos: (pos: { x: number; y: number }) => Promise<void>;
 }
 
 const NotesContext = createContext<NotesContextType | null>(null);
@@ -109,8 +105,6 @@ const dbToNote = (row: any): Note => ({
   color: row.color ?? null,
   posDx: row.pos_dx ?? null,
   posDy: row.pos_dy ?? null,
-  posX: row.pos_x ?? null,
-  posY: row.pos_y ?? null,
   linkedNoteIds: row.linked_note_ids ?? [],
   checklist: (row.checklist as ChecklistItem[]) ?? [],
   noteType: (row.note_type as NoteType) ?? "text",
@@ -139,7 +133,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [loading, setLoading] = useState(true);
   const [brainName, setBrainNameState] = useState<string>("ExoBrain");
   const [onboarded, setOnboardedState] = useState<boolean>(true);
-  const [brainPos, setBrainPosState] = useState<{ x: number; y: number } | null>(null);
 
   // Load data from DB
   useEffect(() => {
@@ -149,16 +142,13 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const [catsRes, notesRes, profileRes] = await Promise.all([
         supabase.from("categories").select("*").order("created_at"),
         supabase.from("notes").select("*").order("created_at", { ascending: false }),
-        supabase.from("profiles").select("brain_name, onboarded, brain_pos_x, brain_pos_y").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("brain_name, onboarded").eq("id", user.id).maybeSingle(),
       ]);
       if (catsRes.data) setCategories(catsRes.data.map(dbToCategory));
       if (notesRes.data) setNotes(notesRes.data.map(dbToNote));
       if (profileRes.data) {
         setBrainNameState(profileRes.data.brain_name || "ExoBrain");
         setOnboardedState(profileRes.data.onboarded ?? false);
-        const bx = (profileRes.data as any).brain_pos_x;
-        const by = (profileRes.data as any).brain_pos_y;
-        setBrainPosState(bx !== null && bx !== undefined && by !== null && by !== undefined ? { x: Number(bx), y: Number(by) } : null);
       }
       setLoading(false);
     };
@@ -177,18 +167,11 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await supabase.from("profiles").update({ onboarded: v }).eq("id", user.id);
   }, [user]);
 
-  // Posición fija de la base del árbol (ExoBrain). Se guarda una vez y no se recalcula.
-  const setBrainPos = useCallback(async (pos: { x: number; y: number }) => {
-    setBrainPosState(pos);
-    if (!user) return;
-    await supabase.from("profiles").update({ brain_pos_x: pos.x, brain_pos_y: pos.y } as any).eq("id", user.id);
-  }, [user]);
-
 
   // Debounced save for note updates
   const updateTimers = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null, pos?: { x: number; y: number } | null) => {
+  const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null) => {
     if (!user) return null;
     // Child notes inherit parent's category and color
     let catId = categoryId;
@@ -210,8 +193,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       checklist: [],
       linked_note_ids: [],
       note_type: noteType,
-      pos_x: pos ? pos.x : null,
-      pos_y: pos ? pos.y : null,
     }).select().single();
     if (error) { toast.error("Error al crear nota"); return null; }
     const note = dbToNote(data);
@@ -253,20 +234,6 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
     await Promise.all(
       entries.map(e => supabase.from("notes").update({ pos_dx: e.dx, pos_dy: e.dy }).eq("id", e.id)),
-    );
-  }, []);
-
-  // Posiciones absolutas fijas: se escriben al crear, al sembrar por primera vez
-  // y al soltar un arrastre. Nada más las toca.
-  const saveAbsolutePositions = useCallback(async (entries: { id: string; x: number; y: number }[]) => {
-    if (entries.length === 0) return;
-    const map = new Map(entries.map(e => [e.id, e]));
-    setNotes(prev => prev.map(n => {
-      const e = map.get(n.id);
-      return e ? { ...n, posX: e.x, posY: e.y } : n;
-    }));
-    await Promise.all(
-      entries.map(e => supabase.from("notes").update({ pos_x: e.x, pos_y: e.y }).eq("id", e.id)),
     );
   }, []);
 
@@ -640,8 +607,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       getSubcategories, getRootCategories, getCategoryPath,
       brainName, setBrainName, onboarded, setOnboarded,
       applyAiAction, getNoteVersions, restoreVersion, recoverDeletedVersion,
-      updateNotePosition, saveNotePositions, clearAllPositions, saveAbsolutePositions,
-      brainPos, setBrainPos,
+      updateNotePosition, saveNotePositions, clearAllPositions,
     }}>
       {children}
     </NotesContext.Provider>
