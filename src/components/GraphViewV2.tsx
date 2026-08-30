@@ -16,7 +16,7 @@ import {
   Download,
   Lock,
   LockOpen,
-  Maximize2,
+  Expand,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
@@ -1399,7 +1399,7 @@ const GraphView = () => {
             title="Volver a vista general"
             aria-label="Volver a vista general"
           >
-            <Maximize2 size={15} />
+            <Expand size={15} />
           </button>
         </div>
       )}
