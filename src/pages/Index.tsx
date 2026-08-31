@@ -5,7 +5,7 @@ import GraphView from "@/components/GraphViewV2";
 const Index = () => {
   return (
     <NotesProvider>
-      <div className="h-screen flex overflow-hidden relative">
+      <div className="h-[100dvh] flex overflow-hidden relative">
         <GraphView />
         <ChatPanel />
       </div>
