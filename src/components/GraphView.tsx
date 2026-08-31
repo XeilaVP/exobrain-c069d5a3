@@ -2,7 +2,25 @@ import { useNotes } from "@/contexts/NotesContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Pencil, Palette, FileText, ListChecks, Pencil as Rename, User as UserIcon, LogOut, LogIn, Brain, TreePine, Sun, Moon, History, Download, Move } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Pencil,
+  Palette,
+  FileText,
+  ListChecks,
+  Pencil as Rename,
+  User as UserIcon,
+  LogOut,
+  LogIn,
+  Brain,
+  TreePine,
+  Sun,
+  Moon,
+  History,
+  Download,
+  Move,
+} from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
 import BrainNameDialog from "./BrainNameDialog";
@@ -27,7 +45,7 @@ interface NodePos {
   y: number;
   type: NodeType;
   label: string;
-  color: string;          // hsl string
+  color: string; // hsl string
   categoryId?: string;
   noteId?: string;
   parentNoteId?: string | null;
@@ -38,7 +56,10 @@ interface NodePos {
   depth: number;
 }
 
-interface Edge { from: string; to: string }
+interface Edge {
+  from: string;
+  to: string;
+}
 
 const ROOT_R = 30;
 const CAT_R = 22;
@@ -46,9 +67,21 @@ const NOTE_R = 12;
 
 const GraphView = () => {
   const {
-    notes, addNote, deleteNote, moveNote, canMoveTo,
-    updateNote, linkNotes, toggleNoteCollapsed,
-    setSelectedNoteId, selectedNoteId, brainName, setBrainName, onboarded, setOnboarded, loading,
+    notes,
+    addNote,
+    deleteNote,
+    moveNote,
+    canMoveTo,
+    updateNote,
+    linkNotes,
+    toggleNoteCollapsed,
+    setSelectedNoteId,
+    selectedNoteId,
+    brainName,
+    setBrainName,
+    onboarded,
+    setOnboarded,
+    loading,
   } = useNotes();
 
   const { user, signOut } = useAuth();
@@ -70,14 +103,16 @@ const GraphView = () => {
   const [linkingNoteId, setLinkingNoteId] = useState<string | null>(null);
   const [focusNoteId, setFocusNoteId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [newNoteDialog, setNewNoteDialog] = useState<{ parentNoteId: string | null; type: "text" | "checklist" } | null>(null);
+  const [newNoteDialog, setNewNoteDialog] = useState<{
+    parentNoteId: string | null;
+    type: "text" | "checklist";
+  } | null>(null);
   const [createDialog, setCreateDialog] = useState<{ x: number; y: number } | null>(null);
   const canvasLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canvasLongPressStart = useRef<{ x: number; y: number } | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [viewZoom, setViewZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
-  
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
@@ -92,7 +127,9 @@ const GraphView = () => {
 
   // Drag offsets per node id (session-local)
   const [offsets, setOffsets] = useState<Record<string, { dx: number; dy: number }>>({});
-  const dragState = useRef<{ nodeId: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+  const dragState = useRef<{ nodeId: string; startX: number; startY: number; baseDx: number; baseDy: number } | null>(
+    null,
+  );
   const panState = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
   const pinchState = useRef<{
@@ -108,9 +145,9 @@ const GraphView = () => {
   const [hiddenCategoryIds, setHiddenCategoryIds] = useState<Set<string>>(new Set());
   const [showFilterPanel, setShowFilterPanel] = useState(false);
 
-  const rootNotes = useMemo(() => notes.filter(n => !n.parentNoteId), [notes]);
+  const rootNotes = useMemo(() => notes.filter((n) => !n.parentNoteId), [notes]);
   const visibleRoots = useMemo(
-    () => rootNotes.filter(n => !hiddenCategoryIds.has(n.id)),
+    () => rootNotes.filter((n) => !hiddenCategoryIds.has(n.id)),
     [rootNotes, hiddenCategoryIds],
   );
 
@@ -138,7 +175,7 @@ const GraphView = () => {
   useEffect(() => {
     if (!openPostIt) return;
     if (selectedNoteId && selectedNoteId !== openPostIt.noteId) {
-      setOpenPostIt(prev => prev ? { ...prev, noteId: selectedNoteId } : prev);
+      setOpenPostIt((prev) => (prev ? { ...prev, noteId: selectedNoteId } : prev));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNoteId]);
@@ -184,7 +221,7 @@ const GraphView = () => {
       overrideRadius?: number,
     ) => {
       const R = overrideRadius ?? radiusForDepth(depth);
-      const children = notes.filter(n => n.parentNoteId === note.id);
+      const children = notes.filter((n) => n.parentNoteId === note.id);
       const expanded = note.isCollapsed === false && children.length > 0;
 
       // Si la nota está expandida, alejarla un poco extra del padre.
@@ -194,9 +231,13 @@ const GraphView = () => {
 
       pos.push({
         id: `note-${note.id}`,
-        x, y,
-        type: "note", label: note.title, color,
-        categoryId: note.categoryId ?? undefined, noteId: note.id,
+        x,
+        y,
+        type: "note",
+        label: note.title,
+        color,
+        categoryId: note.categoryId ?? undefined,
+        noteId: note.id,
         parentNoteId: note.parentNoteId,
         noteType: note.noteType,
         hasChildren: children.length > 0,
@@ -212,7 +253,7 @@ const GraphView = () => {
       let spread = Math.min(Math.PI, Math.PI * 0.5 + count * 0.22);
       if (count >= 4) spread = Math.max(spread, Math.PI * 0.82);
       children.forEach((child, i) => {
-        const t = count === 1 ? 0 : (i / (count - 1)) - 0.5; // -0.5..0.5
+        const t = count === 1 ? 0 : i / (count - 1) - 0.5; // -0.5..0.5
         const angle = outwardAngle + t * spread;
         eds.push({ from: `note-${note.id}`, to: `note-${child.id}` });
         parent[`note-${child.id}`] = `note-${note.id}`;
@@ -246,37 +287,33 @@ const GraphView = () => {
       const catAngle = -Math.PI + t * Math.PI;
       parent[`note-${rootNote.id}`] = "hub";
       eds.push({ from: "hub", to: `note-${rootNote.id}` });
-      placeNoteSubtree(
-        rootNote,
-        rootNote.color || DEFAULT_CATEGORY_COLOR,
-        hubX, hubY,
-        catAngle,
-        0,
-        true,
-        catRadius,
-      );
+      placeNoteSubtree(rootNote, rootNote.color || DEFAULT_CATEGORY_COLOR, hubX, hubY, catAngle, 0, true, catRadius);
     });
-
 
     // Hub node
     pos.push({
       id: "hub",
-      x: hubX, y: hubY,
-      type: "category", label: "", color: "265 22% 52%", depth: -1,
+      x: hubX,
+      y: hubY,
+      type: "category",
+      label: "",
+      color: "265 22% 52%",
+      depth: -1,
     });
     parent["hub"] = "root";
 
     pos.push({
       id: "root",
-      x: hubX, y: rootY,
-      type: "root", label: brainName || "ExoBrain",
-      color: "265 24% 44%", depth: -1,
+      x: hubX,
+      y: rootY,
+      type: "root",
+      label: brainName || "ExoBrain",
+      color: "265 24% 44%",
+      depth: -1,
     });
     eds.push({ from: "root", to: "hub" });
     return { positions: pos, edges: eds, parentMap: parent };
   }, [notes, rootNotes, visibleRoots, brainName, size.w, size.h]);
-
-
 
   // Apply drag offsets — propagate ancestor offsets to descendants so dragging a
   // node moves its whole subtree along with it.
@@ -295,7 +332,7 @@ const GraphView = () => {
       accumulated[id] = total;
       return total;
     };
-    return positions.map(p => {
+    return positions.map((p) => {
       const off = compute(p.id);
       const nx = p.x + off.dx;
       const ny = p.y + off.dy;
@@ -303,8 +340,7 @@ const GraphView = () => {
     });
   }, [positions, offsets, parentMap]);
 
-
-  const getPos = (id: string) => positionsWithOffsets.find(p => p.id === id);
+  const getPos = (id: string) => positionsWithOffsets.find((p) => p.id === id);
 
   const getNodeRadius = useCallback((node: NodePos) => {
     if (node.type === "root") return ROOT_R;
@@ -313,59 +349,71 @@ const GraphView = () => {
     return NOTE_R;
   }, []);
 
-  const getSubtreeIds = useCallback((nodeId: string) => {
-    const ids = new Set<string>();
-    const visitNote = (noteId: string) => {
-      ids.add(`note-${noteId}`);
-      notes.filter(n => n.parentNoteId === noteId).forEach(child => visitNote(child.id));
-    };
-
-    if (nodeId.startsWith("note-")) {
-      visitNote(nodeId.replace("note-", ""));
-    } else if (nodeId.startsWith("cat-")) {
-      const categoryId = nodeId.replace("cat-", "");
-      ids.add(nodeId);
-      notes.filter(n => n.categoryId === categoryId && !n.parentNoteId).forEach(note => visitNote(note.id));
-    } else {
-      positionsWithOffsets.forEach(node => ids.add(node.id));
-    }
-
-    return ids;
-  }, [notes, positionsWithOffsets]);
-
-  const getNodesBounds = useCallback((nodes: NodePos[]) => {
-    if (nodes.length === 0) return null;
-    return nodes.reduce((bounds, node) => {
-      const r = getNodeRadius(node);
-      const labelPadX = node.type === "note" ? 34 : node.type === "category" ? 54 : 72;
-      const labelPadTop = node.type === "note" ? 16 : 0;
-      const labelPadBottom = node.type === "note" ? 0 : 22;
-      return {
-        minX: Math.min(bounds.minX, node.x - Math.max(r, labelPadX)),
-        maxX: Math.max(bounds.maxX, node.x + Math.max(r, labelPadX)),
-        minY: Math.min(bounds.minY, node.y - r - labelPadTop),
-        maxY: Math.max(bounds.maxY, node.y + r + labelPadBottom),
+  const getSubtreeIds = useCallback(
+    (nodeId: string) => {
+      const ids = new Set<string>();
+      const visitNote = (noteId: string) => {
+        ids.add(`note-${noteId}`);
+        notes.filter((n) => n.parentNoteId === noteId).forEach((child) => visitNote(child.id));
       };
-    }, { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
-  }, [getNodeRadius]);
 
-  const focusBranch = useCallback((nodeId: string) => {
-    const subtreeIds = getSubtreeIds(nodeId);
-    const branchNodes = positionsWithOffsets.filter(node => subtreeIds.has(node.id));
-    const bounds = getNodesBounds(branchNodes);
-    if (!bounds) return;
+      if (nodeId.startsWith("note-")) {
+        visitNote(nodeId.replace("note-", ""));
+      } else if (nodeId.startsWith("cat-")) {
+        const categoryId = nodeId.replace("cat-", "");
+        ids.add(nodeId);
+        notes.filter((n) => n.categoryId === categoryId && !n.parentNoteId).forEach((note) => visitNote(note.id));
+      } else {
+        positionsWithOffsets.forEach((node) => ids.add(node.id));
+      }
 
-    const isMobile = size.w < 640;
-    const topMargin = 48;
-    const bottomMargin = isMobile ? 100 : 80;
-    const targetX = size.w / 2;
-    const targetY = (topMargin + (size.h - bottomMargin)) / 2;
-    const branchCenterX = (bounds.minX + bounds.maxX) / 2;
-    const branchCenterY = (bounds.minY + bounds.maxY) / 2;
+      return ids;
+    },
+    [notes, positionsWithOffsets],
+  );
 
-    setViewZoom(1);
-    setPan({ x: targetX - branchCenterX, y: targetY - branchCenterY });
-  }, [getNodesBounds, getSubtreeIds, positionsWithOffsets, size.w, size.h]);
+  const getNodesBounds = useCallback(
+    (nodes: NodePos[]) => {
+      if (nodes.length === 0) return null;
+      return nodes.reduce(
+        (bounds, node) => {
+          const r = getNodeRadius(node);
+          const labelPadX = node.type === "note" ? 34 : node.type === "category" ? 54 : 72;
+          const labelPadTop = node.type === "note" ? 16 : 0;
+          const labelPadBottom = node.type === "note" ? 0 : 22;
+          return {
+            minX: Math.min(bounds.minX, node.x - Math.max(r, labelPadX)),
+            maxX: Math.max(bounds.maxX, node.x + Math.max(r, labelPadX)),
+            minY: Math.min(bounds.minY, node.y - r - labelPadTop),
+            maxY: Math.max(bounds.maxY, node.y + r + labelPadBottom),
+          };
+        },
+        { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity },
+      );
+    },
+    [getNodeRadius],
+  );
+
+  const focusBranch = useCallback(
+    (nodeId: string) => {
+      const subtreeIds = getSubtreeIds(nodeId);
+      const branchNodes = positionsWithOffsets.filter((node) => subtreeIds.has(node.id));
+      const bounds = getNodesBounds(branchNodes);
+      if (!bounds) return;
+
+      const isMobile = size.w < 640;
+      const topMargin = 48;
+      const bottomMargin = isMobile ? 100 : 80;
+      const targetX = size.w / 2;
+      const targetY = (topMargin + (size.h - bottomMargin)) / 2;
+      const branchCenterX = (bounds.minX + bounds.maxX) / 2;
+      const branchCenterY = (bounds.minY + bounds.maxY) / 2;
+
+      setViewZoom(1);
+      setPan({ x: targetX - branchCenterX, y: targetY - branchCenterY });
+    },
+    [getNodesBounds, getSubtreeIds, positionsWithOffsets, size.w, size.h],
+  );
 
   const fitFullTree = useCallback(() => {
     const bounds = getNodesBounds(positionsWithOffsets);
@@ -390,17 +438,18 @@ const GraphView = () => {
   }, [getNodesBounds, positionsWithOffsets, size.w, size.h]);
 
   const hasOpenVisibleBranch = useMemo(() => {
-    return positionsWithOffsets.some(node =>
-      node.id !== "hub" &&
-      (node.type === "note" || node.type === "category") &&
-      node.hasChildren &&
-      node.isCollapsed === false
+    return positionsWithOffsets.some(
+      (node) =>
+        node.id !== "hub" &&
+        (node.type === "note" || node.type === "category") &&
+        node.hasChildren &&
+        node.isCollapsed === false,
     );
   }, [positionsWithOffsets]);
 
   const layoutSignature = useMemo(() => {
     return positions
-      .map(node => `${node.id}:${Math.round(node.x)}:${Math.round(node.y)}:${node.isCollapsed ? 1 : 0}`)
+      .map((node) => `${node.id}:${Math.round(node.x)}:${Math.round(node.y)}:${node.isCollapsed ? 1 : 0}`)
       .join("|");
   }, [positions]);
 
@@ -409,7 +458,7 @@ const GraphView = () => {
 
     const expandedNodeId = lastExpandedRef.current;
     if (expandedNodeId) {
-      if (!positionsWithOffsets.some(node => node.id === expandedNodeId)) return;
+      if (!positionsWithOffsets.some((node) => node.id === expandedNodeId)) return;
       focusBranch(expandedNodeId);
       lastExpandedRef.current = null;
       didInitialFitRef.current = true;
@@ -434,32 +483,38 @@ const GraphView = () => {
   }, [layoutSignature, size.w, size.h, hasOpenVisibleBranch]);
 
   // Long-press handlers
-  const startLongPress = useCallback((nodeId: string, clientX: number, clientY: number) => {
-    didLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      didLongPress.current = true;
-      // If linking and this is a note
-      if (linkingNoteId && nodeId.startsWith("note-")) {
-        const targetId = nodeId.replace("note-", "");
-        if (targetId !== linkingNoteId) {
-          setConfirmDialog({
-            message: "¿Enlazar estas dos notas?",
-            onConfirm: () => {
-              linkNotes(linkingNoteId, targetId);
-              setLinkingNoteId(null);
-              setConfirmDialog(null);
-              toast.success("Notas enlazadas");
-            },
-          });
+  const startLongPress = useCallback(
+    (nodeId: string, clientX: number, clientY: number) => {
+      didLongPress.current = false;
+      longPressTimer.current = setTimeout(() => {
+        didLongPress.current = true;
+        // If linking and this is a note
+        if (linkingNoteId && nodeId.startsWith("note-")) {
+          const targetId = nodeId.replace("note-", "");
+          if (targetId !== linkingNoteId) {
+            setConfirmDialog({
+              message: "¿Enlazar estas dos notas?",
+              onConfirm: () => {
+                linkNotes(linkingNoteId, targetId);
+                setLinkingNoteId(null);
+                setConfirmDialog(null);
+                toast.success("Notas enlazadas");
+              },
+            });
+          }
+          return;
         }
-        return;
-      }
-      setContextMenu({ nodeId, x: clientX, y: clientY });
-    }, 550);
-  }, [linkingNoteId, linkNotes]);
+        setContextMenu({ nodeId, x: clientX, y: clientY });
+      }, 550);
+    },
+    [linkingNoteId, linkNotes],
+  );
 
   const cancelLongPress = useCallback(() => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   }, []);
 
   // Drag / pan / pinch pointer handlers (window-level)
@@ -481,7 +536,7 @@ const GraphView = () => {
           centerX: (p1.x + p2.x) / 2,
           centerY: (p1.y + p2.y) / 2,
         };
-        setPan(p => {
+        setPan((p) => {
           if (pinchState.current) {
             pinchState.current.startPanX = p.x;
             pinchState.current.startPanY = p.y;
@@ -510,7 +565,6 @@ const GraphView = () => {
           canvasLongPressStart.current = null;
         }
       }
-
 
       // Pinch (two active pointers): zoom + pan following centroid
       if (pinchState.current && pointersRef.current.size >= 2) {
@@ -546,7 +600,7 @@ const GraphView = () => {
           const zoom = viewZoomRef.current || 1;
           const dx = rawDx / zoom;
           const dy = rawDy / zoom;
-          setOffsets(prev => ({
+          setOffsets((prev) => ({
             ...prev,
             [ds.nodeId]: { dx: ds.baseDx + dx, dy: ds.baseDy + dy },
           }));
@@ -595,19 +649,29 @@ const GraphView = () => {
   }, [cancelLongPress]);
 
   // Click handling with double-click detection
-  const handleNodeClick = useCallback((nodeId: string, clientX: number, clientY: number) => {
-    if (didDrag.current) { didDrag.current = false; return; }
-    if (didLongPress.current) { didLongPress.current = false; return; }
-    if (contextMenu) { setContextMenu(null); return; }
+  const handleNodeClick = useCallback(
+    (nodeId: string, clientX: number, clientY: number) => {
+      if (didDrag.current) {
+        didDrag.current = false;
+        return;
+      }
+      if (didLongPress.current) {
+        didLongPress.current = false;
+        return;
+      }
+      if (contextMenu) {
+        setContextMenu(null);
+        return;
+      }
 
-    if (clickTimer.current) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-      // Double click
-      if (nodeId.startsWith("note-")) {
-        const nId = nodeId.replace("note-", "");
-        const note = notes.find(n => n.id === nId);
-        const hasChildren = notes.some(n => n.parentNoteId === nId);
+      if (clickTimer.current) {
+        clearTimeout(clickTimer.current);
+        clickTimer.current = null;
+        // Double click
+        if (nodeId.startsWith("note-")) {
+          const nId = nodeId.replace("note-", "");
+          const note = notes.find((n) => n.id === nId);
+          const hasChildren = notes.some((n) => n.parentNoteId === nId);
           if (hasChildren && note) {
             lastExpandedRef.current = note.isCollapsed ? nodeId : null;
             lastCollapsedRef.current = note.isCollapsed ? null : nodeId;
@@ -617,41 +681,42 @@ const GraphView = () => {
         } else if (nodeId === "root") {
           setShowBrainDialog(true);
         }
-      return;
-    }
-    clickTimer.current = setTimeout(() => {
-      clickTimer.current = null;
-      if (nodeId.startsWith("note-")) {
-        const nId = nodeId.replace("note-", "");
-        // If linking via single click on second note
-        if (linkingNoteId && linkingNoteId !== nId) {
-          setConfirmDialog({
-            message: "¿Enlazar estas dos notas?",
-            onConfirm: () => {
-              linkNotes(linkingNoteId, nId);
-              setLinkingNoteId(null);
-              setConfirmDialog(null);
-              toast.success("Notas enlazadas");
-            },
-          });
-          return;
-        }
-        setFocusNoteId(nId);
-        // En escritorio el panel lateral ocupa la derecha: desplazamos el mapa
-        // para que el nodo activo siga siendo visible.
-        if (window.innerWidth >= 768) {
-          const panelW = 400;
-          const overlapX = clientX - (window.innerWidth - panelW - 24);
-          if (overlapX > -40) setPan(p => ({ x: p.x - (overlapX + 80), y: p.y }));
-        }
-        setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
-      } else if (nodeId === "root") {
-        // single click on root opens rename
-        setShowBrainDialog(true);
+        return;
       }
-    }, 240);
-  }, [contextMenu, notes, toggleNoteCollapsed, linkingNoteId, linkNotes]);
-
+      clickTimer.current = setTimeout(() => {
+        clickTimer.current = null;
+        if (nodeId.startsWith("note-")) {
+          const nId = nodeId.replace("note-", "");
+          // If linking via single click on second note
+          if (linkingNoteId && linkingNoteId !== nId) {
+            setConfirmDialog({
+              message: "¿Enlazar estas dos notas?",
+              onConfirm: () => {
+                linkNotes(linkingNoteId, nId);
+                setLinkingNoteId(null);
+                setConfirmDialog(null);
+                toast.success("Notas enlazadas");
+              },
+            });
+            return;
+          }
+          setFocusNoteId(nId);
+          // En escritorio el panel lateral ocupa la derecha: desplazamos el mapa
+          // para que el nodo activo siga siendo visible.
+          if (window.innerWidth >= 768) {
+            const panelW = 400;
+            const overlapX = clientX - (window.innerWidth - panelW - 24);
+            if (overlapX > -40) setPan((p) => ({ x: p.x - (overlapX + 80), y: p.y }));
+          }
+          setOpenPostIt({ noteId: nId, x: clientX, y: clientY });
+        } else if (nodeId === "root") {
+          // single click on root opens rename
+          setShowBrainDialog(true);
+        }
+      }, 240);
+    },
+    [contextMenu, notes, toggleNoteCollapsed, linkingNoteId, linkNotes],
+  );
 
   // Helper: bezier path between two nodes
   const pathBetween = (x1: number, y1: number, x2: number, y2: number) => {
@@ -666,11 +731,12 @@ const GraphView = () => {
   };
 
   // Rama orgánica: contorno relleno con grosor decreciente (efecto 2.5D)
-  const taperedBranch = (
-    x1: number, y1: number, x2: number, y2: number, w1: number, w2: number,
-  ) => {
+  const taperedBranch = (x1: number, y1: number, x2: number, y2: number, w1: number, w2: number) => {
     const midY = (y1 + y2) / 2;
-    const p0 = { x: x1, y: y1 }, p1 = { x: x1, y: midY }, p2 = { x: x2, y: midY }, p3 = { x: x2, y: y2 };
+    const p0 = { x: x1, y: y1 },
+      p1 = { x: x1, y: midY },
+      p2 = { x: x2, y: midY },
+      p3 = { x: x2, y: y2 };
     const N = 22;
     const left: string[] = [];
     const right: string[] = [];
@@ -682,7 +748,8 @@ const GraphView = () => {
       const dx = 3 * mt * mt * (p1.x - p0.x) + 6 * mt * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x);
       const dy = 3 * mt * mt * (p1.y - p0.y) + 6 * mt * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y);
       const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len, ny = dx / len;
+      const nx = -dy / len,
+        ny = dx / len;
       // easing para que el adelgazamiento sea orgánico, no lineal
       const e = t * t * (3 - 2 * t);
       const w = (w1 + (w2 - w1) * e) / 2;
@@ -695,17 +762,17 @@ const GraphView = () => {
   // Rama con protagonismo: subárbol de la raíz del nodo enfocado
   const focusIds = useMemo(() => {
     if (!focusNoteId) return null;
-    let cur = notes.find(n => n.id === focusNoteId);
+    let cur = notes.find((n) => n.id === focusNoteId);
     if (!cur) return null;
     while (cur.parentNoteId) {
-      const p = notes.find(n => n.id === cur!.parentNoteId);
+      const p = notes.find((n) => n.id === cur!.parentNoteId);
       if (!p) break;
       cur = p;
     }
     const ids = new Set<string>(["root", "hub"]);
     const visit = (id: string) => {
       ids.add(`note-${id}`);
-      notes.filter(n => n.parentNoteId === id).forEach(c => visit(c.id));
+      notes.filter((n) => n.parentNoteId === id).forEach((c) => visit(c.id));
     };
     visit(cur.id);
     return ids;
@@ -717,20 +784,33 @@ const GraphView = () => {
   const showLeafLabels = viewZoom > 0.62;
 
   // Link edges (horizontal between notes)
+  // Relaciones enlazadas entre notas.
+  // Se reconstruyen siempre desde linkedNoteIds y se deduplican por pareja,
+  // independientemente de cuál de las dos notas contenga la relación.
   const linkEdges = useMemo(() => {
     const out: { from: string; to: string }[] = [];
-    const ids = new Set(positions.map(p => p.id));
-    notes.forEach(n => {
-      const fromKey = `note-${n.id}`;
-      if (!ids.has(fromKey)) return;
-      n.linkedNoteIds.forEach(lid => {
-        const toKey = `note-${lid}`;
-        if (ids.has(toKey) && n.id < lid) out.push({ from: fromKey, to: toKey });
+    const visibleIds = new Set(visiblePositions.map((p) => p.id));
+    const seen = new Set<string>();
+
+    notes.forEach((note) => {
+      note.linkedNoteIds.forEach((linkedId) => {
+        const pair = [note.id, linkedId].sort();
+        const pairKey = `${pair[0]}::${pair[1]}`;
+
+        if (seen.has(pairKey)) return;
+
+        const from = `note-${pair[0]}`;
+        const to = `note-${pair[1]}`;
+
+        if (!visibleIds.has(from) || !visibleIds.has(to)) return;
+
+        seen.add(pairKey);
+        out.push({ from, to });
       });
     });
-    return out;
-  }, [notes, positions]);
 
+    return out;
+  }, [notes, visiblePositions]);
 
   return (
     <div
@@ -740,7 +820,9 @@ const GraphView = () => {
       onPointerDown={(e) => {
         if (e.button !== 0 && e.pointerType === "mouse") return;
         const target = e.target as HTMLElement;
-        const onBackground = !target.closest("[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]");
+        const onBackground = !target.closest(
+          "[data-graph-node], button, input, textarea, [role='dialog'], [data-no-pan]",
+        );
 
         // Always track pointer for pinch detection
         pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -761,7 +843,10 @@ const GraphView = () => {
           panState.current = null;
           dragState.current = null;
           cancelLongPress();
-          if (canvasLongPressTimer.current) { clearTimeout(canvasLongPressTimer.current); canvasLongPressTimer.current = null; }
+          if (canvasLongPressTimer.current) {
+            clearTimeout(canvasLongPressTimer.current);
+            canvasLongPressTimer.current = null;
+          }
           canvasLongPressStart.current = null;
           didPan.current = true;
           setIsPanning(true);
@@ -796,11 +881,20 @@ const GraphView = () => {
         setIsPanning(true);
       }}
       onClick={() => {
-        if (didPan.current) { didPan.current = false; return; }
-        if (openPostIt) { setOpenPostIt(null); setFocusNoteId(null); }
+        if (didPan.current) {
+          didPan.current = false;
+          return;
+        }
+        if (openPostIt) {
+          setOpenPostIt(null);
+          setFocusNoteId(null);
+        }
         if (contextMenu) setContextMenu(null);
         if (colorPickerCat) setColorPickerCat(null);
-        if (linkingNoteId) { setLinkingNoteId(null); toast.info("Enlace cancelado"); }
+        if (linkingNoteId) {
+          setLinkingNoteId(null);
+          toast.info("Enlace cancelado");
+        }
       }}
     >
       {/* Linking indicator */}
@@ -820,209 +914,224 @@ const GraphView = () => {
           willChange: "transform",
         }}
       >
-      {/* SVG branches (orgánicas, con grosor decreciente) */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0, overflow: "visible" }}>
-        <defs>
+        {/* SVG branches (orgánicas, con grosor decreciente) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0, overflow: "visible" }}>
+          <defs>
+            {edges.map((edge, idx) => {
+              const from = getPos(edge.from);
+              const to = getPos(edge.to);
+              if (!from || !to) return null;
+              return (
+                <linearGradient
+                  key={`bg-${idx}`}
+                  id={`branch-${idx}`}
+                  gradientUnits="userSpaceOnUse"
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={`hsl(${from.type === "note" ? from.color : to.color})`}
+                    stopOpacity={0.85}
+                  />
+                  <stop offset="100%" stopColor={`hsl(${to.color})`} stopOpacity={0.6} />
+                </linearGradient>
+              );
+            })}
+            <radialGradient id="hub-glow">
+              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.32} />
+              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+            </radialGradient>
+          </defs>
+
+          {/* Halo bajo el tronco */}
+          {(() => {
+            const hub = getPos("hub");
+            if (!hub) return null;
+            return <circle cx={hub.x} cy={hub.y} r={140} fill="url(#hub-glow)" />;
+          })()}
+
           {edges.map((edge, idx) => {
             const from = getPos(edge.from);
             const to = getPos(edge.to);
             if (!from || !to) return null;
+            const toY = edge.to === "root" ? to.y - ROOT_R : to.y;
+            const w1 = widthForDepth(from.type === "note" ? from.depth : -1);
+            const w2 = widthForDepth(to.type === "note" ? to.depth : -1);
+            const d = taperedBranch(from.x, from.y, to.x, toY, w1, w2);
+            const opacity = Math.min(dimFor(edge.to), dimFor(edge.from));
             return (
-              <linearGradient
-                key={`bg-${idx}`}
-                id={`branch-${idx}`}
-                gradientUnits="userSpaceOnUse"
-                x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-              >
-                <stop offset="0%" stopColor={`hsl(${from.type === "note" ? from.color : to.color})`} stopOpacity={0.85} />
-                <stop offset="100%" stopColor={`hsl(${to.color})`} stopOpacity={0.6} />
-              </linearGradient>
+              <g key={`be-${idx}`} style={{ opacity, transition: "opacity 400ms ease" }}>
+                {/* volumen: capa exterior difusa */}
+                <path
+                  d={taperedBranch(from.x, from.y, to.x, toY, w1 + 5, w2 + 2.5)}
+                  fill={`hsl(${to.color})`}
+                  fillOpacity={0.1}
+                />
+                <path d={d} fill={`url(#branch-${idx})`} />
+                {/* luz superior sutil para el efecto 2.5D */}
+                <path
+                  d={taperedBranch(from.x, from.y - 0.9, to.x, toY - 0.6, w1 * 0.32, w2 * 0.32)}
+                  fill="hsl(0 0% 100%)"
+                  fillOpacity={0.22}
+                />
+              </g>
             );
           })}
-          <radialGradient id="hub-glow">
-            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.32} />
-            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-          </radialGradient>
-        </defs>
 
-        {/* Halo bajo el tronco */}
-        {(() => {
-          const hub = getPos("hub");
-          if (!hub) return null;
-          return <circle cx={hub.x} cy={hub.y} r={140} fill="url(#hub-glow)" />;
-        })()}
+          {linkEdges.map((edge, idx) => {
+            const from = getPos(edge.from);
+            const to = getPos(edge.to);
+            if (!from || !to) return null;
+            return (
+              <line
+                key={`le-${idx}`}
+                x1={from.x}
+                y1={from.y}
+                x2={to.x}
+                y2={to.y}
+                stroke="hsl(var(--muted-foreground) / 0.35)"
+                strokeWidth={1.2}
+                strokeDasharray="5 5"
+                style={{ opacity: Math.min(dimFor(edge.from), dimFor(edge.to)), transition: "opacity 400ms ease" }}
+              />
+            );
+          })}
+        </svg>
 
-        {edges.map((edge, idx) => {
-          const from = getPos(edge.from);
-          const to = getPos(edge.to);
-          if (!from || !to) return null;
-          const toY = edge.to === "root" ? to.y - ROOT_R : to.y;
-          const w1 = widthForDepth(from.type === "note" ? from.depth : -1);
-          const w2 = widthForDepth(to.type === "note" ? to.depth : -1);
-          const d = taperedBranch(from.x, from.y, to.x, toY, w1, w2);
-          const opacity = Math.min(dimFor(edge.to), dimFor(edge.from));
-          return (
-            <g key={`be-${idx}`} style={{ opacity, transition: "opacity 400ms ease" }}>
-              {/* volumen: capa exterior difusa */}
-              <path d={taperedBranch(from.x, from.y, to.x, toY, w1 + 5, w2 + 2.5)} fill={`hsl(${to.color})`} fillOpacity={0.1} />
-              <path d={d} fill={`url(#branch-${idx})`} />
-              {/* luz superior sutil para el efecto 2.5D */}
-              <path d={taperedBranch(from.x, from.y - 0.9, to.x, toY - 0.6, w1 * 0.32, w2 * 0.32)} fill="hsl(0 0% 100%)" fillOpacity={0.22} />
-            </g>
-          );
-        })}
+        {/* Nodes */}
+        <AnimatePresence>
+          {positionsWithOffsets.map((node) => {
+            const isRoot = node.type === "root";
+            const isHub = node.id === "hub";
+            const isMainNote = node.type === "note" && node.isMain;
+            const isCat = isMainNote;
+            const r = isRoot ? ROOT_R : isHub ? 6 : isMainNote ? CAT_R : NOTE_R;
+            const isLinkSource = linkingNoteId && node.noteId === linkingNoteId;
+            const showCollapsedDot = node.type === "note" && node.hasChildren && node.isCollapsed;
+            const nodeNote = node.noteId ? notes.find((n) => n.id === node.noteId) : null;
+            const dim = dimFor(node.id);
+            const isFocused = !!focusIds && focusIds.has(node.id);
+            const childCount = nodeNote ? notes.filter((n) => n.parentNoteId === nodeNote.id).length : 0;
 
-        {linkEdges.map((edge, idx) => {
-          const from = getPos(edge.from);
-          const to = getPos(edge.to);
-          if (!from || !to) return null;
-          return (
-            <line
-              key={`le-${idx}`}
-              x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-              stroke="hsl(var(--muted-foreground) / 0.35)"
-              strokeWidth={1.2}
-              strokeDasharray="5 5"
-              style={{ opacity: Math.min(dimFor(edge.from), dimFor(edge.to)), transition: "opacity 400ms ease" }}
-            />
-          );
-        })}
-      </svg>
-
-      {/* Nodes */}
-      <AnimatePresence>
-        {positionsWithOffsets.map(node => {
-          const isRoot = node.type === "root";
-          const isHub = node.id === "hub";
-          const isMainNote = node.type === "note" && node.isMain;
-          const isCat = isMainNote;
-          const r = isRoot ? ROOT_R : isHub ? 6 : isMainNote ? CAT_R : NOTE_R;
-          const isLinkSource = linkingNoteId && node.noteId === linkingNoteId;
-          const showCollapsedDot =
-            node.type === "note" && node.hasChildren && node.isCollapsed;
-          const nodeNote = node.noteId ? notes.find(n => n.id === node.noteId) : null;
-          const dim = dimFor(node.id);
-          const isFocused = !!focusIds && focusIds.has(node.id);
-          const childCount = nodeNote ? notes.filter(n => n.parentNoteId === nodeNote.id).length : 0;
-
-          return (
-            <motion.div
-              key={node.id}
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{
-                opacity: dim,
-                scale: isFocused && node.type === "note" ? 1.06 : 1,
-                left: node.x - r,
-                top: node.y - r,
-              }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={
-                dragState.current?.nodeId === node.id
-                  ? { duration: 0 }
-                  : { type: "spring", stiffness: 300, damping: 25 }
-              }
-              className="absolute flex flex-col items-center cursor-grab active:cursor-grabbing touch-none"
-              data-graph-node
-              style={{
-                width: r * 2,
-                zIndex: isRoot ? 6 : isCat ? 4 : 2,
-                filter: dim < 1 ? "blur(1.1px)" : "none",
-              }}
-              onPointerDown={e => {
-                e.stopPropagation();
-                didDrag.current = false;
-                const cur = offsets[node.id] || { dx: 0, dy: 0 };
-                dragState.current = {
-                  nodeId: node.id,
-                  startX: e.clientX,
-                  startY: e.clientY,
-                  baseDx: cur.dx,
-                  baseDy: cur.dy,
-                };
-                startLongPress(node.id, e.clientX, e.clientY);
-              }}
-              onPointerUp={cancelLongPress}
-              onPointerLeave={cancelLongPress}
-              onClick={e => { e.stopPropagation(); handleNodeClick(node.id, e.clientX, e.clientY); }}
-            >
-              {/* Etiqueta píldora bajo las ramas principales */}
-              {isMainNote && (
-                <span
-                  className="absolute whitespace-nowrap surface-glass rounded-full px-2.5 py-1 flex items-center gap-1.5 font-display text-xs font-semibold text-foreground"
-                  style={{ top: r * 2 + 8, left: '50%', transform: 'translateX(-50%)' }}
-                >
+            return (
+              <motion.div
+                key={node.id}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{
+                  opacity: dim,
+                  scale: isFocused && node.type === "note" ? 1.06 : 1,
+                  left: node.x - r,
+                  top: node.y - r,
+                }}
+                exit={{ opacity: 0, scale: 0 }}
+                transition={
+                  dragState.current?.nodeId === node.id
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 300, damping: 25 }
+                }
+                className="absolute flex flex-col items-center cursor-grab active:cursor-grabbing touch-none"
+                data-graph-node
+                style={{
+                  width: r * 2,
+                  zIndex: isRoot ? 6 : isCat ? 4 : 2,
+                  filter: dim < 1 ? "blur(1.1px)" : "none",
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  didDrag.current = false;
+                  const cur = offsets[node.id] || { dx: 0, dy: 0 };
+                  dragState.current = {
+                    nodeId: node.id,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    baseDx: cur.dx,
+                    baseDy: cur.dy,
+                  };
+                  startLongPress(node.id, e.clientX, e.clientY);
+                }}
+                onPointerUp={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNodeClick(node.id, e.clientX, e.clientY);
+                }}
+              >
+                {/* Etiqueta píldora bajo las ramas principales */}
+                {isMainNote && (
                   <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: `hsl(${node.color})` }}
-                  />
-                  {nodeNote?.icon ? `${nodeNote.icon} ` : ""}{node.label}
-                  {childCount > 0 && (
-                    <span className="text-[9px] font-body text-muted-foreground">{childCount}</span>
-                  )}
-                </span>
-              )}
+                    className="absolute whitespace-nowrap surface-glass rounded-full px-2.5 py-1 flex items-center gap-1.5 font-display text-xs font-semibold text-foreground"
+                    style={{ top: r * 2 + 8, left: "50%", transform: "translateX(-50%)" }}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: `hsl(${node.color})` }}
+                    />
+                    {nodeNote?.icon ? `${nodeNote.icon} ` : ""}
+                    {node.label}
+                    {childCount > 0 && <span className="text-[9px] font-body text-muted-foreground">{childCount}</span>}
+                  </span>
+                )}
 
-              {/* Circle (or plain text for root) */}
-              {isRoot ? (
-                <div
-                  className="flex items-center justify-center"
-                  style={{ width: r * 2, height: r * 2 }}
-                >
+                {/* Circle (or plain text for root) */}
+                {isRoot ? (
+                  <div className="flex items-center justify-center" style={{ width: r * 2, height: r * 2 }}>
+                    <span
+                      className="font-display font-bold text-foreground text-center px-2 leading-tight whitespace-nowrap"
+                      style={{ fontSize: node.label.length > 10 ? 13 : 16 }}
+                    >
+                      {node.label}
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    className={`rounded-full flex items-center justify-center shadow-node transition-all ${
+                      isLinkSource ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+                    }`}
+                    style={{
+                      width: r * 2,
+                      height: r * 2,
+                      background: `radial-gradient(circle at 32% 28%, hsl(0 0% 100% / 0.55), hsl(${node.color}) 62%)`,
+                      border: `1.5px solid hsl(${node.color})`,
+                    }}
+                  >
+                    {showCollapsedDot && (
+                      <span
+                        className="rounded-full"
+                        style={{ width: 6, height: 6, backgroundColor: "hsl(var(--card))" }}
+                      />
+                    )}
+                    {node.type === "note" && !showCollapsedDot && (
+                      <span className="text-[10px]" style={{ color: "hsl(var(--card))" }}>
+                        {node.noteType === "checklist" ? "☑" : ""}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Etiqueta sobre el nodo para notas hijas */}
+                {node.type === "note" && !isMainNote && (
                   <span
-                    className="font-display font-bold text-foreground text-center px-2 leading-tight whitespace-nowrap"
-                    style={{ fontSize: node.label.length > 10 ? 13 : 16 }}
+                    className="absolute font-body text-[9px] leading-tight text-foreground/85 whitespace-nowrap overflow-hidden text-ellipsis text-center block px-1.5 py-0.5 rounded-full"
+                    style={{
+                      bottom: r * 2 + 4,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: 60,
+                      opacity: showLeafLabels ? 1 : 0,
+                      backgroundColor: "hsl(var(--glass-strong))",
+                      transition: "opacity 250ms ease",
+                    }}
                   >
                     {node.label}
                   </span>
-                </div>
-              ) : (
-                <div
-                  className={`rounded-full flex items-center justify-center shadow-node transition-all ${
-                    isLinkSource ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
-                  }`}
-                  style={{
-                    width: r * 2,
-                    height: r * 2,
-                    background: `radial-gradient(circle at 32% 28%, hsl(0 0% 100% / 0.55), hsl(${node.color}) 62%)`,
-                    border: `1.5px solid hsl(${node.color})`,
-                  }}
-                >
-                  {showCollapsedDot && (
-                    <span
-                      className="rounded-full"
-                      style={{ width: 6, height: 6, backgroundColor: "hsl(var(--card))" }}
-                    />
-                  )}
-                  {node.type === "note" && !showCollapsedDot && (
-                    <span className="text-[10px]" style={{ color: "hsl(var(--card))" }}>
-                      {node.noteType === "checklist" ? "☑" : ""}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Etiqueta sobre el nodo para notas hijas */}
-              {node.type === "note" && !isMainNote && (
-                <span
-                  className="absolute font-body text-[9px] leading-tight text-foreground/85 whitespace-nowrap overflow-hidden text-ellipsis text-center block px-1.5 py-0.5 rounded-full"
-                  style={{
-                    bottom: r * 2 + 4,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 60,
-                    opacity: showLeafLabels ? 1 : 0,
-                    backgroundColor: "hsl(var(--glass-strong))",
-                    transition: "opacity 250ms ease",
-                  }}
-                >
-                  {node.label}
-                </span>
-              )}
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
-
+                )}
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
 
       {/* Context menu */}
@@ -1034,82 +1143,118 @@ const GraphView = () => {
             exit={{ opacity: 0, scale: 0.9 }}
             className="fixed z-50 surface-panel rounded-2xl py-1 min-w-[170px]"
             style={{ left: Math.min(contextMenu.x, size.w - 180), top: Math.min(contextMenu.y, size.h - 200) }}
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {contextMenu.nodeId === "root" && (
               <button
-                onClick={() => { setShowBrainDialog(true); setContextMenu(null); }}
+                onClick={() => {
+                  setShowBrainDialog(true);
+                  setContextMenu(null);
+                }}
                 className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
               >
-                <Rename size={12} />Renombrar cerebro
+                <Rename size={12} />
+                Renombrar cerebro
               </button>
             )}
 
-            {contextMenu.nodeId.startsWith("note-") && (() => {
-              const nId = contextMenu.nodeId.replace("note-", "");
-              const note = notes.find(n => n.id === nId);
-              if (!note) return null;
-              return (
-                <>
-                  <button
-                    onClick={() => { setNewNoteDialog({ parentNoteId: nId, type: "text" }); setContextMenu(null); }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <FileText size={12} />Añadir hija (texto)
-                  </button>
-                  <button
-                    onClick={() => { setNewNoteDialog({ parentNoteId: nId, type: "checklist" }); setContextMenu(null); }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <ListChecks size={12} />Añadir hija (lista)
-                  </button>
-                  <button
-                    onClick={() => { setMovingNoteId(nId); setContextMenu(null); }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <Move size={12} />Mover a...
-                  </button>
-                  <button
-                    onClick={() => { setEditingCat({ id: nId, name: note.title }); setContextMenu(null); }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <Pencil size={12} />Renombrar
-                  </button>
-                  {!note.parentNoteId && (
+            {contextMenu.nodeId.startsWith("note-") &&
+              (() => {
+                const nId = contextMenu.nodeId.replace("note-", "");
+                const note = notes.find((n) => n.id === nId);
+                if (!note) return null;
+                return (
+                  <>
                     <button
-                      onClick={() => { setColorPickerCat({ id: nId, x: contextMenu.x, y: contextMenu.y }); setContextMenu(null); }}
+                      onClick={() => {
+                        setNewNoteDialog({ parentNoteId: nId, type: "text" });
+                        setContextMenu(null);
+                      }}
                       className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
                     >
-                      <Palette size={12} />Cambiar color
+                      <FileText size={12} />
+                      Añadir hija (texto)
                     </button>
-                  )}
-                  <button
-                    onClick={() => { setIconPickerCat({ id: nId, x: contextMenu.x, y: contextMenu.y }); setContextMenu(null); }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <span className="text-sm leading-none">🙂</span>Cambiar icono
-                  </button>
-                  <button
-                    onClick={() => { setLinkingNoteId(nId); setContextMenu(null); toast.info("Pulsa otra nota para enlazar"); }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    🔗 Enlazar con otra nota
-                  </button>
-                  <button
-                    onClick={() => {
-                      setConfirmDialog({
-                        message: "¿Eliminar esta nota?",
-                        onConfirm: () => { deleteNote(nId); setConfirmDialog(null); },
-                      });
-                      setContextMenu(null);
-                    }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-destructive/10 flex items-center gap-2 font-body text-destructive"
-                  >
-                    <Trash2 size={12} />Eliminar
-                  </button>
-                </>
-              );
-            })()}
+                    <button
+                      onClick={() => {
+                        setNewNoteDialog({ parentNoteId: nId, type: "checklist" });
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
+                    >
+                      <ListChecks size={12} />
+                      Añadir hija (lista)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMovingNoteId(nId);
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
+                    >
+                      <Move size={12} />
+                      Mover a...
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingCat({ id: nId, name: note.title });
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
+                    >
+                      <Pencil size={12} />
+                      Renombrar
+                    </button>
+                    {!note.parentNoteId && (
+                      <button
+                        onClick={() => {
+                          setColorPickerCat({ id: nId, x: contextMenu.x, y: contextMenu.y });
+                          setContextMenu(null);
+                        }}
+                        className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
+                      >
+                        <Palette size={12} />
+                        Cambiar color
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setIconPickerCat({ id: nId, x: contextMenu.x, y: contextMenu.y });
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
+                    >
+                      <span className="text-sm leading-none">🙂</span>Cambiar icono
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLinkingNoteId(nId);
+                        setContextMenu(null);
+                        toast.info("Pulsa otra nota para enlazar");
+                      }}
+                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
+                    >
+                      🔗 Enlazar con otra nota
+                    </button>
+                    <button
+                      onClick={() => {
+                        setConfirmDialog({
+                          message: "¿Eliminar esta nota?",
+                          onConfirm: () => {
+                            deleteNote(nId);
+                            setConfirmDialog(null);
+                          },
+                        });
+                        setContextMenu(null);
+                      }}
+                      className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-destructive/10 flex items-center gap-2 font-body text-destructive"
+                    >
+                      <Trash2 size={12} />
+                      Eliminar
+                    </button>
+                  </>
+                );
+              })()}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1119,12 +1264,15 @@ const GraphView = () => {
         <div
           className="fixed z-50 surface-panel rounded-2xl p-3"
           style={{ left: Math.min(colorPickerCat.x, size.w - 180), top: Math.min(colorPickerCat.y, size.h - 140) }}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <p className="text-xs font-body text-muted-foreground mb-2">Elige un color</p>
           <ColorPicker
-            value={notes.find(n => n.id === colorPickerCat.id)?.color || DEFAULT_CATEGORY_COLOR}
-            onChange={(color) => { updateNote(colorPickerCat.id, { color }); setColorPickerCat(null); }}
+            value={notes.find((n) => n.id === colorPickerCat.id)?.color || DEFAULT_CATEGORY_COLOR}
+            onChange={(color) => {
+              updateNote(colorPickerCat.id, { color });
+              setColorPickerCat(null);
+            }}
           />
         </div>
       )}
@@ -1134,12 +1282,15 @@ const GraphView = () => {
         <div
           className="fixed z-50 surface-panel rounded-2xl p-3"
           style={{ left: Math.min(iconPickerCat.x, size.w - 280), top: Math.min(iconPickerCat.y, size.h - 260) }}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <p className="text-xs font-body text-muted-foreground mb-2">Elige un icono</p>
           <EmojiPicker
-            value={notes.find(n => n.id === iconPickerCat.id)?.icon || undefined}
-            onChange={(icon) => { updateNote(iconPickerCat.id, { icon }); setIconPickerCat(null); }}
+            value={notes.find((n) => n.id === iconPickerCat.id)?.icon || undefined}
+            onChange={(icon) => {
+              updateNote(iconPickerCat.id, { icon });
+              setIconPickerCat(null);
+            }}
           />
         </div>
       )}
@@ -1152,20 +1303,26 @@ const GraphView = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[60] flex items-center justify-center bg-background/60 backdrop-blur-sm"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <motion.div
-              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
               className="bg-card border border-border rounded-xl shadow-2xl p-5 max-w-[280px] w-full mx-4 space-y-4"
             >
               <p className="text-sm font-body text-foreground text-center">{confirmDialog.message}</p>
               <div className="flex gap-2">
-                <button onClick={() => setConfirmDialog(null)}
-                  className="flex-1 text-sm md:text-xs py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-lg bg-muted text-foreground font-body hover:bg-muted/80">
+                <button
+                  onClick={() => setConfirmDialog(null)}
+                  className="flex-1 text-sm md:text-xs py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-lg bg-muted text-foreground font-body hover:bg-muted/80"
+                >
                   Cancelar
                 </button>
-                <button onClick={confirmDialog.onConfirm}
-                  className="flex-1 text-sm md:text-xs py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-lg bg-primary text-primary-foreground font-body hover:opacity-90">
+                <button
+                  onClick={confirmDialog.onConfirm}
+                  className="flex-1 text-sm md:text-xs py-2.5 md:py-2 min-h-11 md:min-h-0 rounded-lg bg-primary text-primary-foreground font-body hover:opacity-90"
+                >
                   Confirmar
                 </button>
               </div>
@@ -1177,7 +1334,10 @@ const GraphView = () => {
       {/* Top-right controls */}
       <div className="fixed top-3 right-3 z-30 flex gap-2">
         <button
-          onClick={(e) => { e.stopPropagation(); toggleTheme(); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleTheme();
+          }}
           className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
           title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
           aria-label="Alternar modo oscuro"
@@ -1186,7 +1346,11 @@ const GraphView = () => {
         </button>
         <div className="relative">
           <button
-            onClick={(e) => { e.stopPropagation(); setShowProfileMenu(v => !v); setShowFilterPanel(false); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowProfileMenu((v) => !v);
+              setShowFilterPanel(false);
+            }}
             className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
             title={user ? "Perfil" : "Iniciar sesión"}
           >
@@ -1195,7 +1359,7 @@ const GraphView = () => {
           {showProfileMenu && (
             <div
               className="absolute right-0 top-12 surface-panel rounded-2xl py-1 min-w-[200px]"
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               {user ? (
                 <>
@@ -1204,47 +1368,72 @@ const GraphView = () => {
                     <p className="text-sm md:text-xs font-body text-foreground truncate">{user.email}</p>
                   </div>
                   <button
-                    onClick={() => { setShowBrainDialog(true); setShowProfileMenu(false); }}
+                    onClick={() => {
+                      setShowBrainDialog(true);
+                      setShowProfileMenu(false);
+                    }}
                     className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
                   >
-                    <Brain size={12} />Renombrar tu brain
+                    <Brain size={12} />
+                    Renombrar tu brain
                   </button>
                   <GoogleCalendarMenuItem onClose={() => setShowProfileMenu(false)} />
                   <button
-                    onClick={() => { setShowProfileMenu(false); setShowHistoryDialog(true); }}
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      setShowHistoryDialog(true);
+                    }}
                     className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
                   >
-                    <History size={12} />Historial
+                    <History size={12} />
+                    Historial
                   </button>
                   <button
-                    onClick={() => { setShowProfileMenu(false); setShowExportDialog(true); }}
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      setShowExportDialog(true);
+                    }}
                     className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
                   >
-                    <Download size={12} />Descargar mis notas
+                    <Download size={12} />
+                    Descargar mis notas
                   </button>
                   <button
-                    onClick={async () => { setShowProfileMenu(false); await signOut(); navigate("/auth"); }}
+                    onClick={async () => {
+                      setShowProfileMenu(false);
+                      await signOut();
+                      navigate("/auth");
+                    }}
                     className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-destructive/10 flex items-center gap-2 font-body text-destructive"
                   >
-                    <LogOut size={12} />Cerrar sesión
+                    <LogOut size={12} />
+                    Cerrar sesión
                   </button>
                 </>
               ) : (
                 <button
-                  onClick={() => { setShowProfileMenu(false); navigate("/auth"); }}
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    navigate("/auth");
+                  }}
                   className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
                 >
-                  <LogIn size={12} />Iniciar sesión
+                  <LogIn size={12} />
+                  Iniciar sesión
                 </button>
               )}
             </div>
           )}
         </div>
 
-
-
         <button
-          onClick={(e) => { e.stopPropagation(); setOffsets({}); setFocusNoteId(null); fitFullTree(); setShowFilterPanel(false); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOffsets({});
+            setFocusNoteId(null);
+            fitFullTree();
+            setShowFilterPanel(false);
+          }}
           className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
           title="Restablecer vista del árbol"
         >
@@ -1252,7 +1441,10 @@ const GraphView = () => {
         </button>
 
         <button
-          onClick={(e) => { e.stopPropagation(); setShowFilterPanel(v => !v); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowFilterPanel((v) => !v);
+          }}
           className={`p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 transition-all flex items-center justify-center ${
             hiddenCategoryIds.size > 0 ? "text-primary" : "text-muted-foreground"
           }`}
@@ -1262,7 +1454,11 @@ const GraphView = () => {
           <span className="text-sm leading-none">{hiddenCategoryIds.size > 0 ? "🙈" : "👁"}</span>
         </button>
         <button
-          onClick={(e) => { e.stopPropagation(); setCreateDialog({ x: size.w / 2, y: size.h / 2 }); setShowFilterPanel(false); }}
+          onClick={(e) => {
+            e.stopPropagation();
+            setCreateDialog({ x: size.w / 2, y: size.h / 2 });
+            setShowFilterPanel(false);
+          }}
           className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
           title="Crear nuevo"
         >
@@ -1274,7 +1470,7 @@ const GraphView = () => {
       {showFilterPanel && (
         <div
           className="fixed top-16 right-3 z-30 surface-panel rounded-2xl p-3 space-y-2 min-w-[220px] max-h-[60vh] overflow-y-auto"
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-1">
             <p className="text-sm md:text-xs font-display font-semibold text-foreground">Mostrar temas</p>
@@ -1290,13 +1486,13 @@ const GraphView = () => {
           {rootNotes.length === 0 && (
             <p className="text-sm md:text-[11px] font-body text-muted-foreground">No hay ramas aún.</p>
           )}
-          {rootNotes.map(cat => {
+          {rootNotes.map((cat) => {
             const hidden = hiddenCategoryIds.has(cat.id);
             return (
               <button
                 key={cat.id}
                 onClick={() => {
-                  setHiddenCategoryIds(prev => {
+                  setHiddenCategoryIds((prev) => {
                     const next = new Set(prev);
                     if (next.has(cat.id)) next.delete(cat.id);
                     else next.add(cat.id);
@@ -1309,9 +1505,14 @@ const GraphView = () => {
               >
                 <span
                   className="w-3.5 h-3.5 md:w-3 md:h-3 rounded-full border"
-                  style={{ backgroundColor: `hsl(${cat.color || DEFAULT_CATEGORY_COLOR})`, borderColor: `hsl(${cat.color || DEFAULT_CATEGORY_COLOR})` }}
+                  style={{
+                    backgroundColor: `hsl(${cat.color || DEFAULT_CATEGORY_COLOR})`,
+                    borderColor: `hsl(${cat.color || DEFAULT_CATEGORY_COLOR})`,
+                  }}
                 />
-                <span className="flex-1 truncate text-foreground">{cat.icon || ""} {cat.title}</span>
+                <span className="flex-1 truncate text-foreground">
+                  {cat.icon || ""} {cat.title}
+                </span>
                 <span className="text-xs md:text-[10px] text-muted-foreground">{hidden ? "oculto" : "visible"}</span>
               </button>
             );
@@ -1323,12 +1524,12 @@ const GraphView = () => {
       {editingCat && (
         <div
           className="fixed top-16 right-3 z-30 surface-panel rounded-2xl p-3 space-y-2 min-w-[200px]"
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <input
             value={editingCat.name}
-            onChange={e => setEditingCat({ ...editingCat, name: e.target.value })}
-            onKeyDown={e => {
+            onChange={(e) => setEditingCat({ ...editingCat, name: e.target.value })}
+            onKeyDown={(e) => {
               if (e.key === "Enter" && editingCat.name.trim()) {
                 updateNote(editingCat.id, { title: editingCat.name.trim() });
                 setEditingCat(null);
@@ -1349,7 +1550,12 @@ const GraphView = () => {
             >
               Guardar
             </button>
-            <button onClick={() => setEditingCat(null)} className="flex-1 bg-muted text-foreground rounded text-sm md:text-xs py-2.5 md:py-1.5 min-h-11 md:min-h-0">Cancelar</button>
+            <button
+              onClick={() => setEditingCat(null)}
+              className="flex-1 bg-muted text-foreground rounded text-sm md:text-xs py-2.5 md:py-1.5 min-h-11 md:min-h-0"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}
@@ -1391,16 +1597,26 @@ const GraphView = () => {
             key={openPostIt.noteId}
             noteId={openPostIt.noteId}
             position={{ x: openPostIt.x, y: openPostIt.y }}
-            onClose={() => { setOpenPostIt(null); setSelectedNoteId(null); setFocusNoteId(null); }}
+            onClose={() => {
+              setOpenPostIt(null);
+              setSelectedNoteId(null);
+              setFocusNoteId(null);
+            }}
           />
         )}
       </AnimatePresence>
 
       <NameInputDialog
         open={newNoteDialog !== null}
-        title={newNoteDialog?.type === "checklist"
-          ? (newNoteDialog?.parentNoteId ? "Nueva lista hija" : "Nueva lista")
-          : (newNoteDialog?.parentNoteId ? "Nueva nota hija" : "Nueva nota")}
+        title={
+          newNoteDialog?.type === "checklist"
+            ? newNoteDialog?.parentNoteId
+              ? "Nueva lista hija"
+              : "Nueva lista"
+            : newNoteDialog?.parentNoteId
+              ? "Nueva nota hija"
+              : "Nueva nota"
+        }
         placeholder={newNoteDialog?.type === "checklist" ? "Nombre de la lista..." : "Nombre de la nota..."}
         onSubmit={async (name) => {
           if (!newNoteDialog) return;
