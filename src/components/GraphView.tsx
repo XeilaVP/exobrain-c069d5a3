@@ -789,7 +789,7 @@ const GraphView = () => {
   // independientemente de cuál de las dos notas contenga la relación.
   const linkEdges = useMemo(() => {
     const out: { from: string; to: string }[] = [];
-    const visibleIds = new Set(visiblePositions.map((p) => p.id));
+    const visibleIds = new Set(positionsWithOffsets.map((p) => p.id));
     const seen = new Set<string>();
 
     notes.forEach((note) => {
@@ -810,7 +810,7 @@ const GraphView = () => {
     });
 
     return out;
-  }, [notes, visiblePositions]);
+  }, [notes, positionsWithOffsets]);
 
   return (
     <div
