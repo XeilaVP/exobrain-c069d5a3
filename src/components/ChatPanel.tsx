@@ -386,6 +386,11 @@ const ChatPanel = () => {
                       }
                       return null;
                     })}
+                    {msg.role === "assistant" && getFallback(msg) && (
+                      <p className="mt-2 text-[10px] text-muted-foreground">
+                        Respondido con la IA incluida · {getFallback(msg)!.fallbackMessage}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               ))}
