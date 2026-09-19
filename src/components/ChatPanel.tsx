@@ -364,6 +364,20 @@ const ChatPanel = () => {
                   >
                     {msg.parts?.map((part, idx) => {
                       if (part.type === "text") {
+                        if (part.text.startsWith(AI_ERROR_PREFIX)) {
+                          const [, , ...rest] = part.text.split(":");
+                          return (
+                            <div key={idx} className="space-y-2">
+                              <p className="text-xs text-destructive">{rest.join(":").trim()}</p>
+                              <button
+                                onClick={retryWithLovable}
+                                className="text-xs underline text-primary"
+                              >
+                                Enviar este mensaje con la IA incluida
+                              </button>
+                            </div>
+                          );
+                        }
                         return (
                           <div key={idx} className="prose prose-sm max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
                             <ReactMarkdown>{part.text}</ReactMarkdown>
