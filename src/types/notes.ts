@@ -14,6 +14,7 @@ export interface ChecklistItem {
   googleTaskId?: string;
   googleEventId?: string;
   updatedAt?: string;
+  priority?: "high" | "medium" | "low";
 }
 
 export type NoteType = "text" | "checklist";
