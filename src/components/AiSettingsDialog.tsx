@@ -62,6 +62,7 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
   };
 
   const usingOwnKey = settings.provider === "openai" && !!settings.last4;
+  const modelMissing = usingOwnKey && !!settings.model && models.length > 0 && !models.includes(settings.model);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
