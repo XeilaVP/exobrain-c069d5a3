@@ -308,23 +308,22 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
 
+        {onBack && (
+          <button onClick={onBack} aria-label="Atrás" title="Atrás"
+            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground shrink-0">
+            <ArrowLeft size={16} />
+          </button>
+        )}
         <div className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground font-body flex-1 min-w-0 flex-wrap">
-          <span className="flex items-center gap-0.5">{brainName || "ExoBrain"}</span>
+          <button onClick={onClose} className="hover:text-foreground flex items-center gap-0.5">{brainName || "ExoBrain"}</button>
           {ancestorPath.map((a) => (
             <span key={a.id} className="flex items-center gap-0.5">
               <ChevronRight size={10} />
-              {a.icon || ""} {a.title}
+              <button onClick={() => goTo(a.id)} className="hover:text-foreground hover:underline flex items-center gap-0.5 min-h-9 md:min-h-0">
+                {a.icon || ""} {a.title}
+              </button>
             </span>
           ))}
-          {parentNote && (
-            <>
-              <ChevronRight size={10} />
-              <button onClick={() => { setSelectedNoteId(parentNote.id); onClose(); }}
-                className="hover:text-foreground flex items-center gap-0.5 min-h-9 md:min-h-0">
-                <ArrowUp size={10} />{parentNote.title}
-              </button>
-            </>
-          )}
           <span className="flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded bg-background/60">
             {isChecklistNote ? <ListChecks size={11} /> : <Type size={11} />}
             {isChecklistNote ? "Lista" : "Texto"}
