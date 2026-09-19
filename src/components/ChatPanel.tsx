@@ -24,9 +24,6 @@ const loadInitialMessages = (): UIMessage[] => {
 };
 
 const AI_ERROR_PREFIX = "__AI_ERROR__:";
-export const LAST_FALLBACK_KEY = "exobrain-ai-last-fallback";
-
-type FallbackMeta = { fallback: string; fallbackMessage: string };
 
 const getFallback = (msg: UIMessage): FallbackMeta | null => {
   const meta = (msg as UIMessage & { metadata?: Partial<FallbackMeta> }).metadata;

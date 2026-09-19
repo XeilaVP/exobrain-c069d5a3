@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAiSettings } from "@/hooks/useAiSettings";
+import { LAST_FALLBACK_KEY } from "@/lib/aiFallback";
 
 interface AiSettingsDialogProps {
   open: boolean;
@@ -123,6 +124,11 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
                   {models.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {modelMissing && (
+                <p className="text-xs text-destructive">
+                  El modelo «{settings.model}» ya no aparece en tu cuenta. Elige otro de la lista.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Solo los modelos de chat disponibles en tu cuenta. Para enviar audio necesitas un modelo con audio.
               </p>
