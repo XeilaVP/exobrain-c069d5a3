@@ -10,6 +10,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import AiSettingsDialog from "@/components/AiSettingsDialog";
 import { useAiSettings } from "@/hooks/useAiSettings";
+import { LAST_FALLBACK_KEY, type FallbackMeta } from "@/lib/aiFallback";
 
 const CHAT_STORAGE_KEY = "exobrain-chat-history";
 
