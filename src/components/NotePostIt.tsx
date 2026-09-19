@@ -204,9 +204,10 @@ interface NotePostItProps {
   noteId: string;
   position: { x: number; y: number };
   onClose: () => void;
+  presentation?: "canvas" | "overlay";
 }
 
-const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
+const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: NotePostItProps) => {
   const {
     notes, updateNote, addChecklistItem, categories,
     getChildNotes, getLinkedNotes, getParentNote, setSelectedNoteId,
@@ -270,21 +271,24 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
 
   const isMobile = window.innerWidth < 768;
   // Panel lateral contextual (escritorio) / hoja inferior casi completa (móvil)
+  const isOverlay = presentation === "overlay";
   const panelWidth = isMobile
     ? window.innerWidth - 12
+    : isOverlay
+      ? Math.min(680, window.innerWidth - 48)
     : maximized
       ? Math.min(760, window.innerWidth - 48)
       : Math.min(400, window.innerWidth - 32);
-  const panelHeight = isMobile ? Math.round(window.innerHeight * 0.92) : window.innerHeight - 32;
-  const left = isMobile ? 6 : window.innerWidth - panelWidth - 16;
-  const top = isMobile ? window.innerHeight - panelHeight - 6 : 16;
+  const panelHeight = isMobile ? Math.round(window.innerHeight * 0.92) : isOverlay ? Math.min(820, window.innerHeight - 64) : window.innerHeight - 32;
+  const left = isMobile ? 6 : isOverlay ? Math.round((window.innerWidth - panelWidth) / 2) : window.innerWidth - panelWidth - 16;
+  const top = isMobile ? window.innerHeight - panelHeight - 6 : isOverlay ? Math.round((window.innerHeight - panelHeight) / 2) : 16;
 
   return (
     <>
     <motion.div
-      initial={{ opacity: 0, x: isMobile ? 0 : 28, y: isMobile ? 28 : 0 }}
+      initial={{ opacity: 0, x: isMobile || isOverlay ? 0 : 28, y: isMobile ? 28 : 0, scale: isOverlay ? 0.98 : 1 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
-      exit={{ opacity: 0, x: isMobile ? 0 : 28, y: isMobile ? 28 : 0 }}
+      exit={{ opacity: 0, x: isMobile || isOverlay ? 0 : 28, y: isMobile ? 28 : 0, scale: isOverlay ? 0.98 : 1 }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       className="fixed z-50 surface-panel rounded-2xl flex flex-col overflow-hidden"
       style={{ left, top, width: panelWidth, height: panelHeight }}
