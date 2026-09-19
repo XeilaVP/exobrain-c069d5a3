@@ -24,7 +24,7 @@ Estilo Google Tasks respetando la jerarquía de ExoBrain:
 - Marcar, editar texto, fecha y prioridad afecta a la tarea original.
 - Botón "Ver nota" en cada bloque para abrir la nota completa.
 
-Se añade prioridad (alta / media / baja, opcional) a las tareas. Se guarda dentro de la propia tarea, junto a su fecha y notas, y también se ve y se edita en el post-it y en la ficha de tarea actuales.
+Se añade prioridad (alta / media / baja, opcional) a las tareas. Se guarda dentro de la propia tarea, junto a su fecha y notas. `NotePostIt.tsx` y `TaskSheet.tsx` también mostrarán y permitirán editarla junto a esos datos.
 
 ## Vista Post-its
 
@@ -42,7 +42,7 @@ Calendario con las tareas que tienen fecha:
 ## Detalles técnicos
 
 - `src/pages/Index.tsx`: pasa a un layout con `AppShell` (lateral + área de contenido) y estado de vista activa (`tree | tasks | postits | planner`) en la URL o en el contexto.
-- Nuevos componentes en `src/components/`: `AppShell.tsx`, `SideNav.tsx` (accesos + buscador + árbol de ramas plegable), `TasksView.tsx`, `PostItsView.tsx`, `PlannerView.tsx`, y `NoteOverlay.tsx` que monta `NotePostIt` centrado fuera del canvas para el botón "Ver nota" de cualquier vista.
+- Nuevos componentes en `src/components/`: `AppShell.tsx`, `SideNav.tsx` (accesos + buscador + árbol de ramas plegable), `TasksView.tsx`, `PostItsView.tsx`, `PlannerView.tsx`, y `NoteOverlay.tsx`. Este último reutiliza `NotePostIt` centrado y fuera del canvas para abrir una nota desde Tasks, Post-its, Planificador o el buscador. Si hace falta, `NotePostIt` recibirá un modo de presentación adicional sin alterar su comportamiento actual dentro de `GraphViewV2`.
 - `GraphViewV2.tsx` se reutiliza tal cual como contenido de la vista Árbol; se mantiene `data-no-pan` y sus gestos.
 - Todas las vistas leen y escriben con `useNotes()` (`notes`, `updateNote`, `toggleChecklistItem`, `setSelectedNoteId`). Sin estado paralelo.
 - Prioridad: campo opcional `priority` en `ChecklistItem` (`src/types/notes.ts`), persistido en el `checklist` jsonb existente. Sin migración de esquema.
