@@ -1,6 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { convertToModelMessages, streamText, type UIMessage } from "npm:ai";
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  streamText,
+  type UIMessage,
+} from "npm:ai";
 import { createOpenAI } from "npm:@ai-sdk/openai";
 import {
   createLovableAiGatewayProvider,
@@ -118,6 +123,31 @@ ${notesContextText}`;
       }
     }
 
+    // Respuesta por la IA incluida (Lovable AI Gateway), con metadata opcional de fallback
+    const runLovable = async (fallback?: { code: string; message: string }) => {
+      const initialRunId = getLovableAiGatewayRunId(req);
+      const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY, initialRunId);
+      const result = streamText({
+        model: gateway("google/gemini-3.5-flash"),
+        system: systemContent,
+        messages: modelMessages,
+      });
+
+      const response = result.toUIMessageStreamResponse({
+        headers: getLovableAiGatewayResponseHeaders(undefined, corsHeaders),
+        ...(fallback
+          ? {
+              messageMetadata: () => ({
+                fallback: fallback.code,
+                fallbackMessage: fallback.message,
+              }),
+            }
+          : {}),
+      });
+
+      return await withLovableAiGatewayRunIdHeader(response, gateway, corsHeaders);
+    };
+
     if (userOpenAiKey) {
       if (audio && !/audio/.test(userModel)) {
         return new Response(
@@ -129,43 +159,120 @@ ${notesContextText}`;
         );
       }
 
+      const classify = (error: unknown): { code: string; message: string } => {
+        const err = error as {
+          statusCode?: number;
+          status?: number;
+          message?: string;
+          data?: unknown;
+          responseBody?: string;
+        };
+        const status = err?.statusCode ?? err?.status;
+        let type = "";
+        let code = "";
+        try {
+          const raw =
+            typeof err?.data === "string" ? JSON.parse(err.data) : (err?.data as Record<string, unknown> | undefined);
+          const inner = (raw as { error?: { type?: string; code?: string } } | undefined)?.error;
+          type = inner?.type ?? "";
+          code = inner?.code ?? "";
+        } catch {
+          // ignore parse errors
+        }
+        const blob = `${type} ${code} ${err?.message ?? ""} ${err?.responseBody ?? ""}`.toLowerCase();
+
+        if (
+          blob.includes("insufficient_quota") ||
+          blob.includes("credit_balance_exhausted") ||
+          blob.includes("no credits") ||
+          status === 402
+        ) {
+          return { code: "NO_CREDIT", message: "tu cuenta de OpenAI no tiene saldo" };
+        }
+        if (blob.includes("invalid_api_key") || blob.includes("incorrect api key") || status === 401) {
+          return { code: "INVALID_KEY", message: "tu clave de OpenAI ha sido rechazada" };
+        }
+        if (blob.includes("model_not_found") || status === 404) {
+          return { code: "MODEL_UNSUPPORTED", message: `el modelo ${userModel} no está disponible en tu cuenta` };
+        }
+        if (status === 429) {
+          return { code: "RATE_LIMIT", message: "OpenAI ha limitado temporalmente tu cuenta" };
+        }
+        if (status === 400) {
+          return { code: "MODEL_UNSUPPORTED", message: `el modelo ${userModel} no admite esta petición` };
+        }
+        return { code: "OPENAI_ERROR", message: "tu cuenta de OpenAI ha dado un error" };
+      };
+
+      let failure: { code: string; message: string } | null = null;
+
       const openai = createOpenAI({ apiKey: userOpenAiKey });
       const result = streamText({
         model: openai.chat(userModel),
         system: systemContent,
         messages: modelMessages,
-      });
-
-      return result.toUIMessageStreamResponse({
-        headers: corsHeaders,
-        onError: (error: unknown) => {
-          const status = (error as { statusCode?: number })?.statusCode;
-          const message = error instanceof Error ? error.message : String(error);
-          console.error("openai user-key error:", status, message);
-          if (status === 401) return "__AI_ERROR__:INVALID_KEY:Tu clave de OpenAI ha sido rechazada.";
-          if (status === 429) return "__AI_ERROR__:RATE_LIMIT:OpenAI ha limitado tu cuenta o no te queda saldo.";
-          if (status === 402) return "__AI_ERROR__:NO_CREDIT:Tu cuenta de OpenAI no tiene saldo.";
-          if (status === 404 || status === 400) return `__AI_ERROR__:MODEL_UNSUPPORTED:El modelo ${userModel} no admite esta petición.`;
-          return `__AI_ERROR__:OPENAI_ERROR:${message.slice(0, 200)}`;
+        maxRetries: 0,
+        onError: ({ error }: { error: unknown }) => {
+          failure = classify(error);
+          console.error("openai user-key error:", failure.code, error);
         },
       });
+
+      // No devolvemos el stream de OpenAI hasta confirmar que ha arrancado
+      const reader = result.toUIMessageStream().getReader();
+      const buffered: unknown[] = [];
+      let started = false;
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const chunk = value as { type?: string; delta?: string };
+          if (chunk?.type === "error") {
+            if (!failure) failure = classify(chunk);
+            break;
+          }
+          buffered.push(value);
+          if (chunk?.type === "text-delta" && chunk.delta) {
+            started = true;
+            break;
+          }
+        }
+      } catch (streamError) {
+        if (!failure) failure = classify(streamError);
+      }
+
+      if (started && !failure) {
+        const merged = new ReadableStream({
+          async start(controller) {
+            try {
+              for (const chunk of buffered) controller.enqueue(chunk);
+              while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                controller.enqueue(value);
+              }
+              controller.close();
+            } catch (error) {
+              controller.error(error);
+            }
+          },
+          cancel: (reason?: unknown) => reader.cancel(reason),
+        });
+
+        return createUIMessageStreamResponse({ stream: merged, headers: corsHeaders });
+      }
+
+      try {
+        await reader.cancel();
+      } catch {
+        // ignore
+      }
+
+      return await runLovable(failure ?? { code: "OPENAI_ERROR", message: "tu cuenta de OpenAI ha dado un error" });
     }
 
-    const initialRunId = getLovableAiGatewayRunId(req);
-    const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY, initialRunId);
-    const model = gateway("google/gemini-3.5-flash");
-
-    const result = streamText({
-      model,
-      system: systemContent,
-      messages: modelMessages,
-    });
-
-    const response = result.toUIMessageStreamResponse({
-      headers: getLovableAiGatewayResponseHeaders(undefined, corsHeaders),
-    });
-
-    return withLovableAiGatewayRunIdHeader(response, gateway, corsHeaders);
+    return await runLovable();
   } catch (e) {
     console.error("ai-agent error:", e);
     return new Response(

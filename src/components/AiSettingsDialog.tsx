@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAiSettings } from "@/hooks/useAiSettings";
+import { LAST_FALLBACK_KEY } from "@/lib/aiFallback";
 
 interface AiSettingsDialogProps {
   open: boolean;
@@ -17,11 +18,23 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
   const [apiKey, setApiKey] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [lastFallback, setLastFallback] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || settings.provider !== "openai") return;
     listModels().then(setModels).catch(() => setModels([]));
   }, [open, settings.provider, listModels]);
+
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const raw = localStorage.getItem(LAST_FALLBACK_KEY);
+      const meta = raw ? (JSON.parse(raw) as { fallbackMessage?: string }) : null;
+      setLastFallback(meta?.fallbackMessage ?? null);
+    } catch {
+      setLastFallback(null);
+    }
+  }, [open]);
 
   const handleSave = async () => {
     if (!apiKey.trim()) return;
@@ -62,6 +75,7 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
   };
 
   const usingOwnKey = settings.provider === "openai" && !!settings.last4;
+  const modelMissing = usingOwnKey && !!settings.model && models.length > 0 && !models.includes(settings.model);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,10 +124,21 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
                   {models.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {modelMissing && (
+                <p className="text-xs text-destructive">
+                  El modelo «{settings.model}» ya no aparece en tu cuenta. Elige otro de la lista.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Solo los modelos de chat disponibles en tu cuenta. Para enviar audio necesitas un modelo con audio.
               </p>
             </div>
+          )}
+
+          {lastFallback && (
+            <p className="text-xs text-muted-foreground">
+              Última vez que se usó la IA incluida: {lastFallback}.
+            </p>
           )}
 
           <p className="text-xs text-muted-foreground">

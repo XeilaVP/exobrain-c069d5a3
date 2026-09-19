@@ -10,6 +10,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import AiSettingsDialog from "@/components/AiSettingsDialog";
 import { useAiSettings } from "@/hooks/useAiSettings";
+import { LAST_FALLBACK_KEY, type FallbackMeta } from "@/lib/aiFallback";
 
 const CHAT_STORAGE_KEY = "exobrain-chat-history";
 
@@ -24,6 +25,14 @@ const loadInitialMessages = (): UIMessage[] => {
 };
 
 const AI_ERROR_PREFIX = "__AI_ERROR__:";
+
+const getFallback = (msg: UIMessage): FallbackMeta | null => {
+  const meta = (msg as UIMessage & { metadata?: Partial<FallbackMeta> }).metadata;
+  if (meta?.fallback && meta.fallbackMessage) {
+    return { fallback: meta.fallback, fallbackMessage: meta.fallbackMessage };
+  }
+  return null;
+};
 
 const ChatPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -109,6 +118,17 @@ const ChatPanel = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Guarda el último motivo por el que se usó la IA incluida (para los ajustes)
+  useEffect(() => {
+    const last = [...messages].reverse().find((m) => m.role === "assistant" && getFallback(m));
+    const meta = last ? getFallback(last) : null;
+    try {
+      if (meta) localStorage.setItem(LAST_FALLBACK_KEY, JSON.stringify(meta));
+    } catch {
+      // ignore
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -386,6 +406,11 @@ const ChatPanel = () => {
                       }
                       return null;
                     })}
+                    {msg.role === "assistant" && getFallback(msg) && (
+                      <p className="mt-2 text-[10px] text-muted-foreground">
+                        Respondido con la IA incluida · {getFallback(msg)!.fallbackMessage}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               ))}
