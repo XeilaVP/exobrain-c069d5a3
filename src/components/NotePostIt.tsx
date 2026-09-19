@@ -261,6 +261,8 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
     }
     return chain;
   })();
+  const goTo = (id: string) => { if (onNavigate) onNavigate(id); else setSelectedNoteId(id); };
+  const siblingNotes = notes.filter(n => n.id !== noteId && (n.parentNoteId ?? null) === (note.parentNoteId ?? null));
   const completedCount = note.checklist.filter(i => i.completed).length;
 
   const availableToLink = notes.filter(n =>
