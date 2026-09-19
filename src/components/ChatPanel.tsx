@@ -288,11 +288,27 @@ const ChatPanel = () => {
             >
               <div className="flex items-center gap-2 pointer-events-none">
                 <Sparkles size={18} className="text-primary" />
-                <h3 className="font-display font-semibold text-card-foreground text-sm">
-                  Asistente AI
-                </h3>
+                <div>
+                  <h3 className="font-display font-semibold text-card-foreground text-sm">
+                    Asistente AI
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground">
+                    {aiSettings.provider === "openai" && aiSettings.last4
+                      ? `Tu OpenAI · ${aiSettings.model ?? "sin modelo"}`
+                      : "IA incluida"}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setSettingsOpen(true)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                  aria-label="Ajustes del asistente"
+                  title="Ajustes del asistente"
+                >
+                  <Settings size={16} />
+                </button>
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => {
