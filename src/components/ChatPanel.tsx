@@ -66,9 +66,10 @@ const ChatPanel = () => {
           notesContext,
           image: attachedImage || undefined,
           audio: attachedAudio || undefined,
+          forceLovable,
         },
       }),
-    [session?.access_token, notesContext, attachedImage, attachedAudio],
+    [session?.access_token, notesContext, attachedImage, attachedAudio, forceLovable],
   );
 
   const initialMessages = useMemo(loadInitialMessages, []);
@@ -84,7 +85,9 @@ const ChatPanel = () => {
     messages: initialMessages,
     onError: (err) => {
       console.error("Chat error:", err);
-      toast.error("Error del asistente. Inténtalo de nuevo.");
+      const raw = err?.message || "";
+      const match = raw.match(/"error"\s*:\s*"([^"]+)"/);
+      toast.error(match ? match[1] : "Error del asistente. Inténtalo de nuevo.");
     },
   });
 
