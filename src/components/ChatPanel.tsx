@@ -21,12 +21,17 @@ const loadInitialMessages = (): UIMessage[] => {
   }
 };
 
+const AI_ERROR_PREFIX = "__AI_ERROR__:";
+
 const ChatPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [attachedAudio, setAttachedAudio] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [forceLovable, setForceLovable] = useState(false);
+  const lastUserTextRef = useRef("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
