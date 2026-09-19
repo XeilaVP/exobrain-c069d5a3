@@ -1,12 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { convertToModelMessages, streamText, type UIMessage } from "npm:ai";
+import { createOpenAI } from "npm:@ai-sdk/openai";
 import {
   createLovableAiGatewayProvider,
   getLovableAiGatewayRunId,
   getLovableAiGatewayResponseHeaders,
   withLovableAiGatewayRunIdHeader,
 } from "../_shared/ai-gateway.ts";
+import { adminClient, decryptSecret } from "../_shared/user-ai-key.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,6 +100,57 @@ ${notesContextText}`;
       }
     }
 
+    const modelMessages = await convertToModelMessages(processedMessages);
+    const forceLovable = body.forceLovable === true;
+
+    // ¿Tiene el usuario su propia clave de OpenAI activa?
+    let userOpenAiKey: string | null = null;
+    let userModel = "gpt-4o-mini";
+    if (!forceLovable) {
+      const { data: settings } = await adminClient()
+        .from("user_ai_settings")
+        .select("provider, model, openai_api_key_encrypted")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (settings?.provider === "openai" && settings.openai_api_key_encrypted) {
+        userOpenAiKey = await decryptSecret(settings.openai_api_key_encrypted);
+        userModel = settings.model || userModel;
+      }
+    }
+
+    if (userOpenAiKey) {
+      if (audio && !/audio/.test(userModel)) {
+        return new Response(
+          JSON.stringify({
+            code: "AUDIO_UNSUPPORTED",
+            error: `El modelo ${userModel} no admite audio. Elige un modelo con audio o envía el mensaje con la IA incluida.`,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const openai = createOpenAI({ apiKey: userOpenAiKey });
+      const result = streamText({
+        model: openai.chat(userModel),
+        system: systemContent,
+        messages: modelMessages,
+      });
+
+      return result.toUIMessageStreamResponse({
+        headers: corsHeaders,
+        onError: (error: unknown) => {
+          const status = (error as { statusCode?: number })?.statusCode;
+          const message = error instanceof Error ? error.message : String(error);
+          console.error("openai user-key error:", status, message);
+          if (status === 401) return "__AI_ERROR__:INVALID_KEY:Tu clave de OpenAI ha sido rechazada.";
+          if (status === 429) return "__AI_ERROR__:RATE_LIMIT:OpenAI ha limitado tu cuenta o no te queda saldo.";
+          if (status === 402) return "__AI_ERROR__:NO_CREDIT:Tu cuenta de OpenAI no tiene saldo.";
+          if (status === 404 || status === 400) return `__AI_ERROR__:MODEL_UNSUPPORTED:El modelo ${userModel} no admite esta petición.`;
+          return `__AI_ERROR__:OPENAI_ERROR:${message.slice(0, 200)}`;
+        },
+      });
+    }
+
     const initialRunId = getLovableAiGatewayRunId(req);
     const gateway = createLovableAiGatewayProvider(LOVABLE_API_KEY, initialRunId);
     const model = gateway("google/gemini-3.5-flash");
@@ -105,7 +158,7 @@ ${notesContextText}`;
     const result = streamText({
       model,
       system: systemContent,
-      messages: await convertToModelMessages(processedMessages),
+      messages: modelMessages,
     });
 
     const response = result.toUIMessageStreamResponse({

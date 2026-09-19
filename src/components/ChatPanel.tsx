@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNotes } from "@/contexts/NotesContext";
 import { useAuth } from "@/hooks/useAuth";
-import { Send, X, Sparkles, Loader2, Image, Mic, MicOff, RefreshCw } from "lucide-react";
+import { Send, X, Sparkles, Loader2, Image, Mic, MicOff, RefreshCw, Settings } from "lucide-react";
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
+import AiSettingsDialog from "@/components/AiSettingsDialog";
+import { useAiSettings } from "@/hooks/useAiSettings";
 
 const CHAT_STORAGE_KEY = "exobrain-chat-history";
 
@@ -21,12 +23,17 @@ const loadInitialMessages = (): UIMessage[] => {
   }
 };
 
+const AI_ERROR_PREFIX = "__AI_ERROR__:";
+
 const ChatPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
   const [attachedAudio, setAttachedAudio] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [forceLovable, setForceLovable] = useState(false);
+  const lastUserTextRef = useRef("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -35,6 +42,7 @@ const ChatPanel = () => {
   const chunksRef = useRef<Blob[]>([]);
   const { notes, categories } = useNotes();
   const { session } = useAuth();
+  const { settings: aiSettings } = useAiSettings();
   const isMobile = useIsMobile();
   const dragControls = useDragControls();
 
@@ -66,9 +74,10 @@ const ChatPanel = () => {
           notesContext,
           image: attachedImage || undefined,
           audio: attachedAudio || undefined,
+          forceLovable,
         },
       }),
-    [session?.access_token, notesContext, attachedImage, attachedAudio],
+    [session?.access_token, notesContext, attachedImage, attachedAudio, forceLovable],
   );
 
   const initialMessages = useMemo(loadInitialMessages, []);
@@ -84,7 +93,9 @@ const ChatPanel = () => {
     messages: initialMessages,
     onError: (err) => {
       console.error("Chat error:", err);
-      toast.error("Error del asistente. Inténtalo de nuevo.");
+      const raw = err?.message || "";
+      const match = raw.match(/"error"\s*:\s*"([^"]+)"/);
+      toast.error(match ? match[1] : "Error del asistente. Inténtalo de nuevo.");
     },
   });
 
@@ -174,10 +185,20 @@ const ChatPanel = () => {
     e?.preventDefault();
     if (!input.trim() && !attachedImage && !attachedAudio) return;
     const text = input.trim() || (attachedImage ? "Describe la imagen adjunta" : "Escucha el audio adjunto");
+    lastUserTextRef.current = text;
+    setForceLovable(false);
     await sendMessage({ text });
     setInput("");
     setAttachedImage(null);
     setAttachedAudio(null);
+  };
+
+  const retryWithLovable = async () => {
+    const text = lastUserTextRef.current;
+    if (!text) return;
+    setForceLovable(true);
+    await sendMessage({ text });
+    setForceLovable(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -267,11 +288,27 @@ const ChatPanel = () => {
             >
               <div className="flex items-center gap-2 pointer-events-none">
                 <Sparkles size={18} className="text-primary" />
-                <h3 className="font-display font-semibold text-card-foreground text-sm">
-                  Asistente AI
-                </h3>
+                <div>
+                  <h3 className="font-display font-semibold text-card-foreground text-sm">
+                    Asistente AI
+                  </h3>
+                  <p className="text-[10px] text-muted-foreground">
+                    {aiSettings.provider === "openai" && aiSettings.last4
+                      ? `Tu OpenAI · ${aiSettings.model ?? "sin modelo"}`
+                      : "IA incluida"}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-1">
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => setSettingsOpen(true)}
+                  className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                  aria-label="Ajustes del asistente"
+                  title="Ajustes del asistente"
+                >
+                  <Settings size={16} />
+                </button>
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={() => {
@@ -327,6 +364,20 @@ const ChatPanel = () => {
                   >
                     {msg.parts?.map((part, idx) => {
                       if (part.type === "text") {
+                        if (part.text.startsWith(AI_ERROR_PREFIX)) {
+                          const [, , ...rest] = part.text.split(":");
+                          return (
+                            <div key={idx} className="space-y-2">
+                              <p className="text-xs text-destructive">{rest.join(":").trim()}</p>
+                              <button
+                                onClick={retryWithLovable}
+                                className="text-xs underline text-primary"
+                              >
+                                Enviar este mensaje con la IA incluida
+                              </button>
+                            </div>
+                          );
+                        }
                         return (
                           <div key={idx} className="prose prose-sm max-w-none [&>p]:m-0 [&>ul]:my-1 [&>ol]:my-1">
                             <ReactMarkdown>{part.text}</ReactMarkdown>
@@ -415,6 +466,8 @@ const ChatPanel = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AiSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 };
