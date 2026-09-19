@@ -574,12 +574,12 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
           />
         )}
 
-        {(parentNote || childNotes.length > 0 || linkedNotes.length > 0) && (
+        {(parentNote || childNotes.length > 0 || siblingNotes.length > 0 || linkedNotes.length > 0) && (
           <div className="border-t border-border pt-2 space-y-2">
             {parentNote && (
               <div>
                 <p className="text-[11px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1 font-body">Madre</p>
-                <button onClick={() => setSelectedNoteId(parentNote.id)}
+                <button onClick={() => goTo(parentNote.id)}
                   className="flex items-center gap-1 text-sm md:text-[10px] bg-muted hover:bg-muted/80 text-foreground rounded px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
                   <ArrowUp size={12} className="md:size-2" />{parentNote.noteType === "checklist" ? <ListChecks size={12} className="md:size-2" /> : <FileText size={12} className="md:size-2" />}{parentNote.title}
                 </button>
@@ -590,9 +590,22 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
                 <p className="text-[11px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1 font-body">Hijas</p>
                 <div className="flex flex-wrap gap-1">
                   {childNotes.map(cn => (
-                    <button key={cn.id} onClick={() => { setSelectedNoteId(cn.id); }}
+                    <button key={cn.id} onClick={() => goTo(cn.id)}
                       className="flex items-center gap-1 text-sm md:text-[10px] bg-muted hover:bg-muted/80 text-foreground rounded px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
                       {cn.noteType === "checklist" ? <ListChecks size={12} className="md:size-2" /> : <FileText size={12} className="md:size-2" />}{cn.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {siblingNotes.length > 0 && (
+              <div>
+                <p className="text-[11px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1 font-body">Hermanas</p>
+                <div className="flex flex-wrap gap-1">
+                  {siblingNotes.map(sn => (
+                    <button key={sn.id} onClick={() => goTo(sn.id)}
+                      className="flex items-center gap-1 text-sm md:text-[10px] bg-muted hover:bg-muted/80 text-foreground rounded px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
+                      {sn.icon || (sn.noteType === "checklist" ? <ListChecks size={12} className="md:size-2" /> : <FileText size={12} className="md:size-2" />)}{sn.title}
                     </button>
                   ))}
                 </div>
