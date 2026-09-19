@@ -17,11 +17,23 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
   const [apiKey, setApiKey] = useState("");
   const [models, setModels] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [lastFallback, setLastFallback] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || settings.provider !== "openai") return;
     listModels().then(setModels).catch(() => setModels([]));
   }, [open, settings.provider, listModels]);
+
+  useEffect(() => {
+    if (!open) return;
+    try {
+      const raw = localStorage.getItem(LAST_FALLBACK_KEY);
+      const meta = raw ? (JSON.parse(raw) as { fallbackMessage?: string }) : null;
+      setLastFallback(meta?.fallbackMessage ?? null);
+    } catch {
+      setLastFallback(null);
+    }
+  }, [open]);
 
   const handleSave = async () => {
     if (!apiKey.trim()) return;
