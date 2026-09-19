@@ -42,6 +42,7 @@ const ChatPanel = () => {
   const chunksRef = useRef<Blob[]>([]);
   const { notes, categories } = useNotes();
   const { session } = useAuth();
+  const { settings: aiSettings } = useAiSettings();
   const isMobile = useIsMobile();
   const dragControls = useDragControls();
 
