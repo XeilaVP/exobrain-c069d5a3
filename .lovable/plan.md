@@ -23,8 +23,11 @@ Además, hoy ese fallo se ve como un error genérico porque:
 
 ## Detalles técnicos
 
-- `supabase/functions/ai-agent/index.ts`: en la rama de clave propia, `streamText` con `maxRetries: 0`; se consume el primer fragmento antes de responder, y si la llamada falla se reconstruye la petición por el Lovable AI Gateway (`google/gemini-3.5-flash`) y se devuelve ese stream.
-- Clasificación del fallo por `error.data.error.type/code` (`insufficient_quota`, `credit_balance_exhausted`, `invalid_api_key`, `model_not_found`) además del `statusCode`; el motivo viaja al cliente en una cabecera `X-Exobrain-Fallback`.
-- `src/components/ChatPanel.tsx`: lee esa cabecera y muestra la nota discreta bajo la respuesta; el indicador vuelve a decir "IA incluida" en esa respuesta.
-- `src/components/AiSettingsDialog.tsx`: aviso del último motivo de fallback y marca del modelo guardado si no aparece en la lista de `ai-models`.
+- `supabase/functions/ai-agent/index.ts`: en la rama de clave propia, `streamText` con `maxRetries: 0`.
+- No se devuelve al cliente el stream de OpenAI hasta confirmar que la petición ha arrancado correctamente. Si antes del primer contenido falla por falta de saldo, rate limit, clave rechazada o modelo no disponible, se descarta esa respuesta y se ejecuta de inmediato la misma petición por Lovable AI Gateway (`google/gemini-3.5-flash`).
+- Clasificación del fallo por `error.data.error.type/code` (`insufficient_quota`, `credit_balance_exhausted`, `invalid_api_key`, `model_not_found`) además del `statusCode`.
+- Cuando hay fallback, el motivo (`NO_CREDIT`, `RATE_LIMIT`, `INVALID_KEY`, `MODEL_UNSUPPORTED`) viaja como metadata dentro del propio stream de respuesta, no en una cabecera HTTP.
+- `src/components/ChatPanel.tsx`: lee esa metadata y muestra bajo esa respuesta una nota discreta, p. ej. "Respondido con la IA incluida · tu cuenta de OpenAI no tiene saldo".
+- El proveedor configurado no cambia por un fallo puntual: el fallback afecta solo a ese envío; el indicador general sigue mostrando la configuración elegida.
+- `src/components/AiSettingsDialog.tsx`: mostrar el último motivo de fallback y marcar el modelo guardado si deja de aparecer en la lista de `ai-models`.
 - Sin cambios en notas, árbol, vistas ni en el layout móvil.
