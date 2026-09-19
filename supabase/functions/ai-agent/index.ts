@@ -1,12 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { convertToModelMessages, streamText, type UIMessage } from "npm:ai";
+import { createOpenAI } from "npm:@ai-sdk/openai";
 import {
   createLovableAiGatewayProvider,
   getLovableAiGatewayRunId,
   getLovableAiGatewayResponseHeaders,
   withLovableAiGatewayRunIdHeader,
 } from "../_shared/ai-gateway.ts";
+import { adminClient, decryptSecret } from "../_shared/user-ai-key.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
