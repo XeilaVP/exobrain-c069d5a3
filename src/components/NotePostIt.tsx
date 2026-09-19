@@ -208,9 +208,13 @@ interface NotePostItProps {
   position: { x: number; y: number };
   onClose: () => void;
   presentation?: "canvas" | "overlay";
+  /** Si se pasa, la navegación entre notas ocurre aquí mismo (post-it centrado) */
+  onNavigate?: (noteId: string) => void;
+  /** Botón "Atrás" del historial de navegación (solo post-it centrado) */
+  onBack?: () => void;
 }
 
-const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: NotePostItProps) => {
+const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavigate, onBack }: NotePostItProps) => {
   const {
     notes, updateNote, addChecklistItem, categories,
     getChildNotes, getLinkedNotes, getParentNote, setSelectedNoteId,
