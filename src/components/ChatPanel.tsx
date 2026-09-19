@@ -182,10 +182,20 @@ const ChatPanel = () => {
     e?.preventDefault();
     if (!input.trim() && !attachedImage && !attachedAudio) return;
     const text = input.trim() || (attachedImage ? "Describe la imagen adjunta" : "Escucha el audio adjunto");
+    lastUserTextRef.current = text;
+    setForceLovable(false);
     await sendMessage({ text });
     setInput("");
     setAttachedImage(null);
     setAttachedAudio(null);
+  };
+
+  const retryWithLovable = async () => {
+    const text = lastUserTextRef.current;
+    if (!text) return;
+    setForceLovable(true);
+    await sendMessage({ text });
+    setForceLovable(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
