@@ -135,6 +135,12 @@ const AiSettingsDialog = ({ open, onOpenChange }: AiSettingsDialogProps) => {
             </div>
           )}
 
+          {lastFallback && (
+            <p className="text-xs text-muted-foreground">
+              Última vez que se usó la IA incluida: {lastFallback}.
+            </p>
+          )}
+
           <p className="text-xs text-muted-foreground">
             Estado actual: {usingOwnKey ? `Tu OpenAI · ${settings.model ?? "sin modelo"}` : "IA incluida"}
           </p>
