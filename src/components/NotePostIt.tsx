@@ -1,6 +1,6 @@
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Flag } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Flag } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion, Reorder, useDragControls } from "framer-motion";
@@ -208,9 +208,13 @@ interface NotePostItProps {
   position: { x: number; y: number };
   onClose: () => void;
   presentation?: "canvas" | "overlay";
+  /** Si se pasa, la navegación entre notas ocurre aquí mismo (post-it centrado) */
+  onNavigate?: (noteId: string) => void;
+  /** Botón "Atrás" del historial de navegación (solo post-it centrado) */
+  onBack?: () => void;
 }
 
-const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: NotePostItProps) => {
+const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavigate, onBack }: NotePostItProps) => {
   const {
     notes, updateNote, addChecklistItem, categories,
     getChildNotes, getLinkedNotes, getParentNote, setSelectedNoteId,
@@ -257,6 +261,8 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: Note
     }
     return chain;
   })();
+  const goTo = (id: string) => { if (onNavigate) onNavigate(id); else setSelectedNoteId(id); };
+  const siblingNotes = notes.filter(n => n.id !== noteId && (n.parentNoteId ?? null) === (note.parentNoteId ?? null));
   const completedCount = note.checklist.filter(i => i.completed).length;
 
   const availableToLink = notes.filter(n =>
@@ -302,23 +308,22 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: Note
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
 
+        {onBack && (
+          <button onClick={onBack} aria-label="Atrás" title="Atrás"
+            className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground shrink-0">
+            <ArrowLeft size={16} />
+          </button>
+        )}
         <div className="flex items-center gap-1 text-xs md:text-[10px] text-muted-foreground font-body flex-1 min-w-0 flex-wrap">
-          <span className="flex items-center gap-0.5">{brainName || "ExoBrain"}</span>
+          <button onClick={onClose} className="hover:text-foreground flex items-center gap-0.5">{brainName || "ExoBrain"}</button>
           {ancestorPath.map((a) => (
             <span key={a.id} className="flex items-center gap-0.5">
               <ChevronRight size={10} />
-              {a.icon || ""} {a.title}
+              <button onClick={() => goTo(a.id)} className="hover:text-foreground hover:underline flex items-center gap-0.5 min-h-9 md:min-h-0">
+                {a.icon || ""} {a.title}
+              </button>
             </span>
           ))}
-          {parentNote && (
-            <>
-              <ChevronRight size={10} />
-              <button onClick={() => { setSelectedNoteId(parentNote.id); onClose(); }}
-                className="hover:text-foreground flex items-center gap-0.5 min-h-9 md:min-h-0">
-                <ArrowUp size={10} />{parentNote.title}
-              </button>
-            </>
-          )}
           <span className="flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded bg-background/60">
             {isChecklistNote ? <ListChecks size={11} /> : <Type size={11} />}
             {isChecklistNote ? "Lista" : "Texto"}
@@ -569,12 +574,12 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: Note
           />
         )}
 
-        {(parentNote || childNotes.length > 0 || linkedNotes.length > 0) && (
+        {(parentNote || childNotes.length > 0 || siblingNotes.length > 0 || linkedNotes.length > 0) && (
           <div className="border-t border-border pt-2 space-y-2">
             {parentNote && (
               <div>
                 <p className="text-[11px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1 font-body">Madre</p>
-                <button onClick={() => setSelectedNoteId(parentNote.id)}
+                <button onClick={() => goTo(parentNote.id)}
                   className="flex items-center gap-1 text-sm md:text-[10px] bg-muted hover:bg-muted/80 text-foreground rounded px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
                   <ArrowUp size={12} className="md:size-2" />{parentNote.noteType === "checklist" ? <ListChecks size={12} className="md:size-2" /> : <FileText size={12} className="md:size-2" />}{parentNote.title}
                 </button>
@@ -585,9 +590,22 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: Note
                 <p className="text-[11px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1 font-body">Hijas</p>
                 <div className="flex flex-wrap gap-1">
                   {childNotes.map(cn => (
-                    <button key={cn.id} onClick={() => { setSelectedNoteId(cn.id); }}
+                    <button key={cn.id} onClick={() => goTo(cn.id)}
                       className="flex items-center gap-1 text-sm md:text-[10px] bg-muted hover:bg-muted/80 text-foreground rounded px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
                       {cn.noteType === "checklist" ? <ListChecks size={12} className="md:size-2" /> : <FileText size={12} className="md:size-2" />}{cn.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {siblingNotes.length > 0 && (
+              <div>
+                <p className="text-[11px] md:text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1 font-body">Hermanas</p>
+                <div className="flex flex-wrap gap-1">
+                  {siblingNotes.map(sn => (
+                    <button key={sn.id} onClick={() => goTo(sn.id)}
+                      className="flex items-center gap-1 text-sm md:text-[10px] bg-muted hover:bg-muted/80 text-foreground rounded px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
+                      {sn.icon || (sn.noteType === "checklist" ? <ListChecks size={12} className="md:size-2" /> : <FileText size={12} className="md:size-2" />)}{sn.title}
                     </button>
                   ))}
                 </div>
@@ -599,7 +617,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: Note
                 <div className="flex flex-wrap gap-1">
                   {linkedNotes.map(ln => (
                     <div key={ln.id} className="flex items-center gap-0.5">
-                      <button onClick={() => setSelectedNoteId(ln.id)}
+                      <button onClick={() => goTo(ln.id)}
                         className="flex items-center gap-1 text-sm md:text-[10px] bg-primary/10 text-foreground rounded-l px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
                         <Link2 size={12} className="md:size-2 text-primary" />{ln.title}
                       </button>
