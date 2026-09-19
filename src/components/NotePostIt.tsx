@@ -1,6 +1,6 @@
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Flag } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion, Reorder, useDragControls } from "framer-motion";
@@ -124,13 +124,14 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
           <span className={`block text-[15px] font-body leading-snug break-words ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
             {item.text || <span className="italic text-muted-foreground/60">Sin título</span>}
           </span>
-          {(item.dueAt || subtaskCount > 0) && (
+          {(item.dueAt || item.priority || subtaskCount > 0) && (
             <span className="flex items-center gap-2 mt-0.5 text-[11px] font-body text-muted-foreground">
               {item.dueAt && (
                 <span className={`inline-flex items-center gap-0.5 ${overdue ? "text-destructive" : ""}`}>
                   <CalendarIcon size={11} />{dueLabel(item.dueAt, item.hasTime)}
                 </span>
               )}
+              {item.priority && <span className="inline-flex items-center gap-0.5"><Flag size={11} />{item.priority === "high" ? "Alta" : item.priority === "medium" ? "Media" : "Baja"}</span>}
               {subtaskCount > 0 && (
                 <span className="inline-flex items-center gap-0.5">
                   <CornerDownRight size={11} />{subtaskCount}
@@ -194,7 +195,9 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
       >
         <GripVertical size={14} />
       </div>
-      {checkbox}{textEl}{actions}
+      {checkbox}{textEl}
+      {item.priority && <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"><Flag size={11} />{item.priority === "high" ? "Alta" : item.priority === "medium" ? "Media" : "Baja"}</span>}
+      {actions}
     </Reorder.Item>
   );
 };
@@ -204,9 +207,10 @@ interface NotePostItProps {
   noteId: string;
   position: { x: number; y: number };
   onClose: () => void;
+  presentation?: "canvas" | "overlay";
 }
 
-const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
+const NotePostIt = ({ noteId, position, onClose, presentation = "canvas" }: NotePostItProps) => {
   const {
     notes, updateNote, addChecklistItem, categories,
     getChildNotes, getLinkedNotes, getParentNote, setSelectedNoteId,
@@ -270,21 +274,24 @@ const NotePostIt = ({ noteId, position, onClose }: NotePostItProps) => {
 
   const isMobile = window.innerWidth < 768;
   // Panel lateral contextual (escritorio) / hoja inferior casi completa (móvil)
+  const isOverlay = presentation === "overlay";
   const panelWidth = isMobile
     ? window.innerWidth - 12
+    : isOverlay
+      ? Math.min(680, window.innerWidth - 48)
     : maximized
       ? Math.min(760, window.innerWidth - 48)
       : Math.min(400, window.innerWidth - 32);
-  const panelHeight = isMobile ? Math.round(window.innerHeight * 0.92) : window.innerHeight - 32;
-  const left = isMobile ? 6 : window.innerWidth - panelWidth - 16;
-  const top = isMobile ? window.innerHeight - panelHeight - 6 : 16;
+  const panelHeight = isMobile ? Math.round(window.innerHeight * 0.92) : isOverlay ? Math.min(820, window.innerHeight - 64) : window.innerHeight - 32;
+  const left = isMobile ? 6 : isOverlay ? Math.round((window.innerWidth - panelWidth) / 2) : window.innerWidth - panelWidth - 16;
+  const top = isMobile ? window.innerHeight - panelHeight - 6 : isOverlay ? Math.round((window.innerHeight - panelHeight) / 2) : 16;
 
   return (
     <>
     <motion.div
-      initial={{ opacity: 0, x: isMobile ? 0 : 28, y: isMobile ? 28 : 0 }}
+      initial={{ opacity: 0, x: isMobile || isOverlay ? 0 : 28, y: isMobile ? 28 : 0, scale: isOverlay ? 0.98 : 1 }}
       animate={{ opacity: 1, x: 0, y: 0 }}
-      exit={{ opacity: 0, x: isMobile ? 0 : 28, y: isMobile ? 28 : 0 }}
+      exit={{ opacity: 0, x: isMobile || isOverlay ? 0 : 28, y: isMobile ? 28 : 0, scale: isOverlay ? 0.98 : 1 }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
       className="fixed z-50 surface-panel rounded-2xl flex flex-col overflow-hidden"
       style={{ left, top, width: panelWidth, height: panelHeight }}

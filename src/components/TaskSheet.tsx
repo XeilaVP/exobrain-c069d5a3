@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
-import { X, Calendar as CalendarIcon, Clock, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, CalendarPlus, CalendarCheck2, CalendarX, Dot, ListChecks, Copy } from "lucide-react";
+import { X, Calendar as CalendarIcon, Clock, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, CalendarPlus, CalendarCheck2, CalendarX, Dot, ListChecks, Copy, Flag } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChecklistItem } from "@/types/notes";
@@ -243,6 +243,25 @@ const TaskSheet = ({
                   </p>
                 )}
               </div>
+              )}
+
+              {task.style !== "bullet" && (
+                <div>
+                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Prioridad</label>
+                  <div className="relative mt-1 flex min-h-11 items-center rounded-md bg-muted px-3">
+                    <Flag size={16} className="mr-2 text-muted-foreground" />
+                    <select
+                      value={task.priority ?? ""}
+                      onChange={e => onChange({ priority: (e.target.value || undefined) as ChecklistItem["priority"] })}
+                      className="min-h-11 flex-1 bg-transparent text-sm text-foreground outline-none font-body"
+                    >
+                      <option value="">Sin prioridad</option>
+                      <option value="high">Alta</option>
+                      <option value="medium">Media</option>
+                      <option value="low">Baja</option>
+                    </select>
+                  </div>
+                </div>
               )}
 
               {/* Google Calendar */}
