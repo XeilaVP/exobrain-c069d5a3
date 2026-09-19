@@ -466,6 +466,8 @@ const ChatPanel = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AiSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 };
