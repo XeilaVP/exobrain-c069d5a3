@@ -122,6 +122,17 @@ const ChatPanel = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Guarda el último motivo por el que se usó la IA incluida (para los ajustes)
+  useEffect(() => {
+    const last = [...messages].reverse().find((m) => m.role === "assistant" && getFallback(m));
+    const meta = last ? getFallback(last) : null;
+    try {
+      if (meta) localStorage.setItem(LAST_FALLBACK_KEY, JSON.stringify(meta));
+    } catch {
+      // ignore
+    }
+  }, [messages]);
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
