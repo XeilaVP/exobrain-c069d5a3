@@ -617,7 +617,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
                 <div className="flex flex-wrap gap-1">
                   {linkedNotes.map(ln => (
                     <div key={ln.id} className="flex items-center gap-0.5">
-                      <button onClick={() => setSelectedNoteId(ln.id)}
+                      <button onClick={() => goTo(ln.id)}
                         className="flex items-center gap-1 text-sm md:text-[10px] bg-primary/10 text-foreground rounded-l px-3 py-2 md:px-2 md:py-1 font-body min-h-11 md:min-h-0">
                         <Link2 size={12} className="md:size-2 text-primary" />{ln.title}
                       </button>
