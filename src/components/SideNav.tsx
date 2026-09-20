@@ -10,6 +10,8 @@ interface SideNavProps {
   view: WorkspaceView;
   onView: (view: WorkspaceView) => void;
   onOpenNote: (noteId: string) => void;
+  mobile?: boolean;
+  onClose?: () => void;
 }
 
 const navItems = [
@@ -19,7 +21,7 @@ const navItems = [
   { id: "planner" as const, label: "Planificador", icon: CalendarDays },
 ];
 
-const SideNav = ({ view, onView, onOpenNote }: SideNavProps) => {
+const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavProps) => {
   const { notes, brainName } = useNotes();
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
@@ -59,19 +61,23 @@ const SideNav = ({ view, onView, onOpenNote }: SideNavProps) => {
   };
 
   return (
-    <aside className={`${collapsed ? "w-16" : "w-72"} relative z-30 h-full shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-200 flex flex-col`}>
+    <aside className={`${mobile ? "w-full" : collapsed ? "w-16" : "w-72"} relative z-30 h-full shrink-0 border-r border-sidebar-border bg-sidebar transition-[width] duration-200 flex flex-col`}>
       <div className="h-16 flex items-center gap-2 border-b border-sidebar-border px-3">
-        <Button variant="ghost" size="icon" onClick={() => setCollapsed(v => !v)} aria-label={collapsed ? "Abrir navegación" : "Plegar navegación"}><Menu /></Button>
-        {!collapsed && <h1 className="font-display text-lg font-semibold truncate">{brainName}</h1>}
+        {mobile ? (
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Cerrar navegación"><X /></Button>
+        ) : (
+          <Button variant="ghost" size="icon" onClick={() => setCollapsed(v => !v)} aria-label={collapsed ? "Abrir navegación" : "Plegar navegación"}><Menu /></Button>
+        )}
+        {(mobile || !collapsed) && <h1 className="font-display text-lg font-semibold truncate">{brainName}</h1>}
       </div>
       <nav className="p-2 space-y-1">
         {navItems.map(item => (
-          <Button key={item.id} variant={view === item.id ? "secondary" : "ghost"} className={`w-full ${collapsed ? "px-0" : "justify-start"}`} onClick={() => onView(item.id)} title={item.label}>
-            <item.icon /> {!collapsed && item.label}
+          <Button key={item.id} variant={view === item.id ? "secondary" : "ghost"} className={`w-full ${!mobile && collapsed ? "px-0" : "justify-start"}`} onClick={() => onView(item.id)} title={item.label}>
+            <item.icon /> {(mobile || !collapsed) && item.label}
           </Button>
         ))}
       </nav>
-      {!collapsed && (
+      {(mobile || !collapsed) && (
         <>
           <div className="px-3 pt-2 pb-3 border-b border-sidebar-border relative">
             <Search className="absolute left-5 top-5 h-4 w-4 text-muted-foreground" />
