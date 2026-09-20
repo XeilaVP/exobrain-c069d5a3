@@ -8,13 +8,14 @@ Además, Árbol, Tasks, Post-its y Planificador están dentro de `AppShell`, que
 
 ## Cambios
 
-- Montar una sola instancia del árbol por tamaño de pantalla, evitando identificadores SVG duplicados y recuperando tronco, uniones y todas las ramas en la vista genérica móvil.
+- Simplificar `Index.tsx` para que monte únicamente `AppShell` dentro de `NotesProvider`; eliminar por completo el bloque móvil independiente con su segunda copia de `GraphViewV2` y `ChatPanel`.
+- Hacer `AppShell` responsive en vez de ocultarlo mediante CSS: montar una única instancia de `GraphViewV2` solamente cuando la vista activa sea Árbol.
 - Integrar móvil en el mismo sistema de vistas existente: Árbol, Tasks, Post-its y Planificador seguirán mostrando los mismos datos, sin copias.
 - Convertir la navegación lateral en un panel móvil que se abre desde un botón visible y se cierra al elegir una vista o una nota.
 - Mantener el panel fijo/plegable actual en escritorio.
 - Abrir desde móvil las notas encontradas en búsqueda o navegación jerárquica mediante el mismo `NoteOverlay` ya usado en las vistas de escritorio.
 - Mantener el chat dentro de Árbol y conservar su disposición móvil actual; no mostrarlo encima de Tasks, Post-its o Planificador.
-- No cambiar posiciones, geometría, arrastre, zoom, selección ni contenido de notas.
+- No cambiar `GraphViewV2`, `treeGeometry.ts`, posiciones absolutas, `brainPos`, curvas Bézier, `motifPath`, `pickMotif`, zoom, pan, drag, escalado inicial, colores, gradientes, selección ni contenido de notas.
 
 ## Verificación
 
@@ -23,3 +24,4 @@ Además, Árbol, Tasks, Post-its y Planificador están dentro de `AppShell`, que
 - Buscar y abrir una nota desde el panel móvil, y cerrarla sin perder la vista activa.
 - Confirmar que gestos del árbol y chat siguen funcionando en móvil.
 - En escritorio: confirmar que el panel y las cuatro vistas permanecen iguales y que solo existe una copia activa del árbol.
+- Inspeccionar el árbol montado y confirmar que nunca existe una segunda instancia oculta mediante CSS.
