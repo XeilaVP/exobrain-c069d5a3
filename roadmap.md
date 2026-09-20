@@ -8,6 +8,6 @@
 - [x] Añadir prioridad editable a tareas
 - [x] Abrir notas completas desde cualquier vista mediante NoteOverlay
 - [x] Verificar escritorio, móvil y compilación
-- [ ] Unificar el shell responsive y eliminar la segunda instancia móvil del árbol
-- [ ] Añadir navegación móvil a Árbol, Tasks, Post-its y Planificador
-- [ ] Verificar tronco, ramas, drawer, chat y escritorio
+- [x] Unificar el shell responsive y eliminar la segunda instancia móvil del árbol
+- [x] Añadir navegación móvil a Árbol, Tasks, Post-its y Planificador
+- [x] Verificar tronco, ramas, drawer, chat y escritorio
