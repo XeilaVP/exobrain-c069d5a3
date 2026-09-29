@@ -36,6 +36,11 @@ export interface Note {
   noteType: NoteType;
   isCollapsed: boolean;
   icon?: string | null;
+  inTasks?: boolean;
+  inPostits?: boolean;
+  inCalendar?: boolean;
+  calendarAt?: string | null;
+  calendarHasTime?: boolean;
   createdAt: string;
   updatedAt: string;
 }
