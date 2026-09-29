@@ -38,7 +38,10 @@ export interface NoteVersion {
   createdAt: string;
 }
 
+export type ViewMembershipPatch = Partial<Pick<Note, "inTasks" | "inPostits" | "inCalendar" | "calendarAt" | "calendarHasTime">>;
+
 interface NotesContextType {
+  setViewMembership: (id: string, patch: ViewMembershipPatch) => Promise<void>;
   notes: Note[];
   categories: Category[];
   selectedCategoryId: string | null;
@@ -116,6 +119,11 @@ const dbToNote = (row: any): Note => ({
   noteType: (row.note_type as NoteType) ?? "text",
   isCollapsed: row.is_collapsed ?? true,
   icon: row.icon ?? null,
+  inTasks: row.in_tasks ?? false,
+  inPostits: row.in_postits ?? false,
+  inCalendar: row.in_calendar ?? false,
+  calendarAt: row.calendar_at ?? null,
+  calendarHasTime: row.calendar_has_time ?? false,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -237,6 +245,18 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.color !== undefined) dbUpdates.color = updates.color;
       await supabase.from("notes").update(dbUpdates).eq("id", id);
     }, 500);
+  }, []);
+
+  const setViewMembership = useCallback(async (id: string, patch: ViewMembershipPatch) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch } : n));
+    const db: any = {};
+    if (patch.inTasks !== undefined) db.in_tasks = patch.inTasks;
+    if (patch.inPostits !== undefined) db.in_postits = patch.inPostits;
+    if (patch.inCalendar !== undefined) db.in_calendar = patch.inCalendar;
+    if (patch.calendarAt !== undefined) db.calendar_at = patch.calendarAt;
+    if (patch.calendarHasTime !== undefined) db.calendar_has_time = patch.calendarHasTime;
+    const { error } = await supabase.from("notes").update(db).eq("id", id);
+    if (error) console.error("setViewMembership", error);
   }, []);
 
     const updateNotePosition = useCallback(async (id: string, dx: number | null, dy: number | null) => {
@@ -629,6 +649,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <NotesContext.Provider value={{
+      setViewMembership,
       notes, categories, selectedCategoryId, selectedNoteId, activeView, loading,
       setActiveView, setSelectedCategoryId, setSelectedNoteId,
       addNote, moveNote, getDescendantIds, canMoveTo, getRootNotes, updateNote, deleteNote, addCategory, updateCategory, deleteCategory,

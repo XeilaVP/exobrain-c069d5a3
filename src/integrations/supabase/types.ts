@@ -245,6 +245,8 @@ export type Database = {
       }
       notes: {
         Row: {
+          calendar_at: string | null
+          calendar_has_time: boolean
           category_id: string | null
           checklist: Json
           color: string | null
@@ -252,6 +254,9 @@ export type Database = {
           created_at: string
           icon: string | null
           id: string
+          in_calendar: boolean
+          in_postits: boolean
+          in_tasks: boolean
           is_collapsed: boolean
           linked_note_ids: string[]
           note_type: string
@@ -265,6 +270,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          calendar_at?: string | null
+          calendar_has_time?: boolean
           category_id?: string | null
           checklist?: Json
           color?: string | null
@@ -272,6 +279,9 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          in_calendar?: boolean
+          in_postits?: boolean
+          in_tasks?: boolean
           is_collapsed?: boolean
           linked_note_ids?: string[]
           note_type?: string
@@ -285,6 +295,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          calendar_at?: string | null
+          calendar_has_time?: boolean
           category_id?: string | null
           checklist?: Json
           color?: string | null
@@ -292,6 +304,9 @@ export type Database = {
           created_at?: string
           icon?: string | null
           id?: string
+          in_calendar?: boolean
+          in_postits?: boolean
+          in_tasks?: boolean
           is_collapsed?: boolean
           linked_note_ids?: string[]
           note_type?: string
@@ -401,6 +416,8 @@ export type Database = {
       move_note: {
         Args: { _new_parent_id?: string; _note_id: string }
         Returns: {
+          calendar_at: string | null
+          calendar_has_time: boolean
           category_id: string | null
           checklist: Json
           color: string | null
@@ -408,6 +425,9 @@ export type Database = {
           created_at: string
           icon: string | null
           id: string
+          in_calendar: boolean
+          in_postits: boolean
+          in_tasks: boolean
           is_collapsed: boolean
           linked_note_ids: string[]
           note_type: string
@@ -430,6 +450,8 @@ export type Database = {
       recover_deleted_note_version: {
         Args: { _version_id: string }
         Returns: {
+          calendar_at: string | null
+          calendar_has_time: boolean
           category_id: string | null
           checklist: Json
           color: string | null
@@ -437,6 +459,9 @@ export type Database = {
           created_at: string
           icon: string | null
           id: string
+          in_calendar: boolean
+          in_postits: boolean
+          in_tasks: boolean
           is_collapsed: boolean
           linked_note_ids: string[]
           note_type: string
@@ -459,6 +484,8 @@ export type Database = {
       restore_note_version: {
         Args: { _note_id: string; _version_id: string }
         Returns: {
+          calendar_at: string | null
+          calendar_has_time: boolean
           category_id: string | null
           checklist: Json
           color: string | null
@@ -466,6 +493,9 @@ export type Database = {
           created_at: string
           icon: string | null
           id: string
+          in_calendar: boolean
+          in_postits: boolean
+          in_tasks: boolean
           is_collapsed: boolean
           linked_note_ids: string[]
           note_type: string

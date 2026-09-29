@@ -31,14 +31,15 @@ const NotePreview = ({ note }: { note: Note }) => note.noteType === "checklist" 
 ) : <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{plainText(note.content) || "Sin contenido"}</p>;
 
 const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
-  const { notes } = useNotes();
+  const { notes: allNotes, setViewMembership } = useNotes();
+  const notes = useMemo(() => allNotes.filter(n => n.inPostits), [allNotes]);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("updated");
   const [branchId, setBranchId] = useState<string>("all");
   const [subBranchId, setSubBranchId] = useState<string>("all");
 
-  const roots = useMemo(() => notes.filter(n => !n.parentNoteId), [notes]);
-  const subBranches = useMemo(() => branchId === "all" ? [] : notes.filter(n => n.parentNoteId === branchId), [notes, branchId]);
+  const roots = useMemo(() => allNotes.filter(n => !n.parentNoteId), [allNotes]);
+  const subBranches = useMemo(() => branchId === "all" ? [] : allNotes.filter(n => n.parentNoteId === branchId), [allNotes, branchId]);
 
   const descendants = useMemo(() => {
     const withDescendants = (rootId: string) => {
@@ -46,7 +47,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
       let added = true;
       while (added) {
         added = false;
-        notes.forEach(n => {
+        allNotes.forEach(n => {
           if (n.parentNoteId && ids.has(n.parentNoteId) && !ids.has(n.id)) { ids.add(n.id); added = true; }
         });
       }
@@ -54,7 +55,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
     };
     const scope = subBranchId !== "all" ? subBranchId : branchId !== "all" ? branchId : null;
     return scope ? withDescendants(scope) : null;
-  }, [notes, branchId, subBranchId]);
+  }, [allNotes, branchId, subBranchId]);
 
   const visible = useMemo(() => {
     const list = descendants ? notes.filter(n => descendants.has(n.id)) : [...notes];
@@ -74,7 +75,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
   return (
     <section className="h-full overflow-y-auto bg-background px-8 py-7 scrollbar-thin">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-5"><h2 className="text-3xl font-semibold">Post-its</h2><p className="mt-1 text-sm text-muted-foreground">Una lectura visual rápida de todas tus notas</p></div>
+        <div className="mb-5"><h2 className="text-3xl font-semibold">Post-its</h2><p className="mt-1 text-sm text-muted-foreground">Las notas que has añadido a Post-its</p></div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
@@ -115,12 +116,13 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
             <div className="mb-3 flex items-center gap-2"><span>{note.icon || (note.noteType === "checklist" ? "☑" : "•")}</span><h3 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{note.title}</h3>{note.noteType === "checklist" && <ListChecks className="h-4 w-4 text-muted-foreground" />}</div><NotePreview note={note} />
           </button>)}
         </div>
+        {visible.length === 0 && <p className="py-24 text-center text-muted-foreground">Aún no hay post-its. Abre una nota y pulsa «Añadir a Post-its».</p>}
       </div>
       {preview && <div className="fixed inset-0 z-40 flex items-center justify-center bg-background/55 p-8 backdrop-blur-sm" onClick={() => setPreviewId(null)}>
         <article className="max-h-[75vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-float" onClick={e => e.stopPropagation()} style={{ borderTopColor: preview.color ? `hsl(${preview.color})` : undefined, borderTopWidth: 5 }}>
           <header className="mb-5 flex items-center gap-3"><span className="text-xl">{preview.icon || "•"}</span><h3 className="min-w-0 flex-1 font-display text-2xl font-semibold">{preview.title}</h3><Button variant="ghost" size="icon" onClick={() => setPreviewId(null)} aria-label="Cerrar"><X /></Button></header>
           <NotePreview note={preview} />
-          <div className="mt-6 flex justify-end"><Button onClick={() => { setPreviewId(null); onOpenNote(preview.id); }}><ExternalLink /> Ver nota</Button></div>
+          <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => { setViewMembership(preview.id, { inPostits: false }); setPreviewId(null); }}><X /> Quitar de Post-its</Button><Button onClick={() => { setPreviewId(null); onOpenNote(preview.id); }}><ExternalLink /> Ver nota</Button></div>
         </article>
       </div>}
     </section>

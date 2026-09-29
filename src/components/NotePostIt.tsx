@@ -11,6 +11,7 @@ import TaskSheet from "./TaskSheet";
 import EmojiPicker from "./EmojiPicker";
 import MoveToDialog from "./MoveToDialog";
 import ColorPicker from "./ColorPicker";
+import ViewMembershipBar from "./ViewMembershipBar";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 import { format, isToday, isTomorrow, isPast } from "date-fns";
@@ -573,6 +574,10 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
             placeholder="Escribe aquí... usa la barra para dar formato"
           />
         )}
+
+        <div className="border-t border-border pt-2">
+          <ViewMembershipBar note={note} />
+        </div>
 
         {(parentNote || childNotes.length > 0 || siblingNotes.length > 0 || linkedNotes.length > 0) && (
           <div className="border-t border-border pt-2 space-y-2">
