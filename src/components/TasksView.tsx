@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronRight, ExternalLink, Flag, ListChecks } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronRight, ExternalLink, FileText, Flag, ListChecks, X } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNotes } from "@/contexts/NotesContext";
@@ -9,10 +9,10 @@ import { ChecklistItem, Note } from "@/types/notes";
 interface TasksViewProps { onOpenNote: (id: string) => void; }
 
 const TasksView = ({ onOpenNote }: TasksViewProps) => {
-  const { notes, updateNote } = useNotes();
-  const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set(notes.filter(n => n.noteType === "checklist").map(n => n.id)));
-  const listNotes = useMemo(() => notes.filter(n => n.noteType === "checklist"), [notes]);
-  const depthOf = (note: Note) => { let depth = 0; let parent = note.parentNoteId; const seen = new Set<string>(); while (parent && !seen.has(parent)) { seen.add(parent); depth++; parent = notes.find(n => n.id === parent)?.parentNoteId ?? null; } return depth; };
+  const { notes, updateNote, setViewMembership } = useNotes();
+  const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set(notes.map(n => n.id)));
+  const listNotes = useMemo(() => notes.filter(n => n.inTasks), [notes]);
+  const depthOf = (note: Note) => { let depth = 0; let parent = note.parentNoteId; const seen = new Set<string>(); while (parent && !seen.has(parent)) { seen.add(parent); if (notes.find(n => n.id === parent)?.inTasks) depth++; parent = notes.find(n => n.id === parent)?.parentNoteId ?? null; } return depth; };
   const patchItem = (note: Note, itemId: string, patch: Partial<ChecklistItem>) => updateNote(note.id, { checklist: note.checklist.map(item => item.id === itemId ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item) });
   const priorityLabel = { high: "Alta", medium: "Media", low: "Baja" } as const;
 
@@ -28,10 +28,11 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
               <article key={note.id} className="rounded-lg border border-border bg-card shadow-soft" style={{ marginLeft: Math.min(depthOf(note) * 18, 90) }}>
                 <header className="flex items-center gap-2 border-b border-border px-3 py-2">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpenNotes(prev => { const next = new Set(prev); next.has(note.id) ? next.delete(note.id) : next.add(note.id); return next; })}>{isOpen ? <ChevronDown /> : <ChevronRight />}</Button>
-                  <ListChecks className="text-primary" /><h3 className="flex-1 font-display font-semibold">{note.title}</h3>
+                  {note.noteType === "checklist" ? <ListChecks className="text-primary" /> : <FileText className="text-primary" />}<h3 className="flex-1 font-display font-semibold">{note.title}</h3>
                   <Button variant="ghost" size="sm" onClick={() => onOpenNote(note.id)}><ExternalLink /> Ver nota</Button>
+                  <Button variant="ghost" size="sm" onClick={() => setViewMembership(note.id, { inTasks: false })} title="Quitar de Tasks (no borra la nota)"><X /> Quitar</Button>
                 </header>
-                {isOpen && <div className="divide-y divide-border/70 px-3">{roots.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Sin tareas</p> : roots.map(item => {
+                {isOpen && note.noteType === "checklist" && <div className="divide-y divide-border/70 px-3">{roots.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Sin tareas</p> : roots.map(item => {
                   const children = note.checklist.filter(i => i.parentId === item.id && i.style !== "bullet");
                   const row = (task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-12 items-center gap-3 py-2 ${child ? "ml-8" : ""}`}>
                     <input type="checkbox" checked={task.completed} onChange={() => patchItem(note, task.id, { completed: !task.completed })} className="h-4 w-4 accent-primary" />
@@ -47,7 +48,7 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
               </article>
             );
           })}
-          {listNotes.length === 0 && <div className="py-24 text-center text-muted-foreground"><ListChecks className="mx-auto mb-3 h-8 w-8" /><p>No hay notas de tipo lista.</p></div>}
+          {listNotes.length === 0 && <div className="py-24 text-center text-muted-foreground"><ListChecks className="mx-auto mb-3 h-8 w-8" /><p>Aún no has añadido notas. Abre una nota y pulsa «Añadir a Tasks».</p></div>}
         </div>
       </div>
     </section>
