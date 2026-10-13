@@ -1,4 +1,5 @@
 import { toggleAndSort } from "@/lib/checklistOrder";
+import { subtaskTransferBundle } from "@/lib/subtaskTransfer";
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { Note, Category, ChecklistItem, NoteType } from "@/types/notes";
 import { supabase } from "@/integrations/supabase/client";
@@ -280,6 +281,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const source = notesRef.current.find(n => n.id === sourceId);
       const target = notesRef.current.find(n => n.id === targetId);
       if (!source || !target) throw new Error("Missing note");
+      subtaskTransferBundle(source, target, itemId);
       const { data, error } = await supabase.rpc("move_checklist_subtask", {
         _source_id: sourceId, _target_id: targetId, _item_id: itemId,
         _source_checklist: source.checklist as any, _target_checklist: target.checklist as any,
@@ -592,7 +594,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const restoreVersion = useCallback(async (noteId: string, versionId: string): Promise<boolean> => {
     clearTimeout(updateTimers.current[noteId]);
-    clearTimeout(checklistTimers.current[noteId]);
+    delete pendingUpdates.current[noteId];
 
     const { data, error } = await supabase.rpc("restore_note_version", {
       _note_id: noteId,
