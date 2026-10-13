@@ -41,6 +41,7 @@ export interface Note {
   inCalendar?: boolean;
   calendarAt?: string | null;
   calendarHasTime?: boolean;
+  priority?: "high" | "medium" | "low" | null;
   createdAt: string;
   updatedAt: string;
 }

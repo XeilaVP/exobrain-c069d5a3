@@ -265,6 +265,7 @@ export type Database = {
           pos_dy: number | null
           pos_x: number | null
           pos_y: number | null
+          priority: string | null
           title: string
           updated_at: string
           user_id: string
@@ -290,6 +291,7 @@ export type Database = {
           pos_dy?: number | null
           pos_x?: number | null
           pos_y?: number | null
+          priority?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -315,6 +317,7 @@ export type Database = {
           pos_dy?: number | null
           pos_x?: number | null
           pos_y?: number | null
+          priority?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -436,6 +439,7 @@ export type Database = {
           pos_dy: number | null
           pos_x: number | null
           pos_y: number | null
+          priority: string | null
           title: string
           updated_at: string
           user_id: string
@@ -470,6 +474,7 @@ export type Database = {
           pos_dy: number | null
           pos_x: number | null
           pos_y: number | null
+          priority: string | null
           title: string
           updated_at: string
           user_id: string
@@ -504,6 +509,7 @@ export type Database = {
           pos_dy: number | null
           pos_x: number | null
           pos_y: number | null
+          priority: string | null
           title: string
           updated_at: string
           user_id: string

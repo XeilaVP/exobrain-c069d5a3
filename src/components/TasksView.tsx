@@ -1,54 +1,55 @@
-import { useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, ChevronRight, ExternalLink, FileText, Flag, ListChecks, X } from "lucide-react";
+import { useMemo } from "react";
+import { CalendarDays, ExternalLink, Flag, ListChecks } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { ChecklistItem, Note } from "@/types/notes";
+import { prioritizedEntries, itemsOf, isSubtask } from "@/lib/taskLevels";
+import { sortChecklistByCompletion } from "@/lib/checklistOrder";
 
 interface TasksViewProps { onOpenNote: (id: string) => void; }
+const priorityLabel: Record<string, string> = { high: "Alta", medium: "Media", low: "Baja" };
 
 const TasksView = ({ onOpenNote }: TasksViewProps) => {
-  const { notes, updateNote, setViewMembership } = useNotes();
-  const [openNotes, setOpenNotes] = useState<Set<string>>(() => new Set(notes.map(n => n.id)));
-  const listNotes = useMemo(() => notes.filter(n => n.inTasks), [notes]);
-  const depthOf = (note: Note) => { let depth = 0; let parent = note.parentNoteId; const seen = new Set<string>(); while (parent && !seen.has(parent)) { seen.add(parent); if (notes.find(n => n.id === parent)?.inTasks) depth++; parent = notes.find(n => n.id === parent)?.parentNoteId ?? null; } return depth; };
-  const patchItem = (note: Note, itemId: string, patch: Partial<ChecklistItem>) => updateNote(note.id, { checklist: note.checklist.map(item => item.id === itemId ? { ...item, ...patch, updatedAt: new Date().toISOString() } : item) });
-  const priorityLabel = { high: "Alta", medium: "Media", low: "Baja" } as const;
+  const { notes, updateNote } = useNotes();
+  const entries = useMemo(() => prioritizedEntries(notes), [notes]);
+  const patchItem = (note: Note, itemId: string, patch: Partial<ChecklistItem>) => {
+    const next = note.checklist.map(i => i.id === itemId ? { ...i, ...patch, updatedAt: new Date().toISOString() } : i);
+    updateNote(note.id, { checklist: patch.completed !== undefined ? sortChecklistByCompletion(next) : next });
+  };
+  const meta = (priority?: string | null, dueAt?: string | null, hasTime?: boolean) => <>
+    {dueAt && <span className="flex items-center gap-1 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" />{format(new Date(dueAt), hasTime ? "d MMM · HH:mm" : "d MMM", { locale: es })}</span>}
+    {priority && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Flag className="h-3.5 w-3.5" />{priorityLabel[priority]}</span>}
+  </>;
+  const row = (note: Note, task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-10 items-center gap-3 py-1.5 ${child ? "ml-7" : ""}`}>
+    <input type="checkbox" checked={task.completed} onChange={() => patchItem(note, task.id, { completed: !task.completed })} className="h-4 w-4 accent-primary" />
+    <span className={`min-w-0 flex-1 text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.text}</span>
+    {!child && meta(task.priority, task.dueAt, task.hasTime)}
+  </div>;
 
   return (
     <section className="h-full overflow-y-auto bg-background px-8 py-7 scrollbar-thin">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Tareas organizadas según las ramas de ExoBrain</p></div><span className="text-sm text-muted-foreground">{listNotes.reduce((sum, n) => sum + n.checklist.filter(i => i.style !== "bullet").length, 0)} tareas</span></div>
+        <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Tareas y subtareas con fecha o prioridad</p></div><span className="text-sm text-muted-foreground">{entries.length} prioritarias</span></div>
         <div className="space-y-3">
-          {listNotes.map(note => {
-            const roots = note.checklist.filter(i => !i.parentId && i.style !== "bullet").sort((a, b) => Number(a.completed) - Number(b.completed));
-            const isOpen = openNotes.has(note.id);
-            return (
-              <article key={note.id} className="rounded-lg border border-border bg-card shadow-soft" style={{ marginLeft: Math.min(depthOf(note) * 18, 90) }}>
-                <header className="flex items-center gap-2 border-b border-border px-3 py-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setOpenNotes(prev => { const next = new Set(prev); next.has(note.id) ? next.delete(note.id) : next.add(note.id); return next; })}>{isOpen ? <ChevronDown /> : <ChevronRight />}</Button>
-                  {note.noteType === "checklist" ? <ListChecks className="text-primary" /> : <FileText className="text-primary" />}<h3 className="flex-1 font-display font-semibold">{note.title}</h3>
-                  <Button variant="ghost" size="sm" onClick={() => onOpenNote(note.id)}><ExternalLink /> Ver nota</Button>
-                  <Button variant="ghost" size="sm" onClick={() => setViewMembership(note.id, { inTasks: false })} title="Quitar de Tasks (no borra la nota)"><X /> Quitar</Button>
-                </header>
-                {isOpen && note.noteType === "checklist" && <div className="divide-y divide-border/70 px-3">{roots.length === 0 ? <p className="py-6 text-center text-sm text-muted-foreground">Sin tareas</p> : roots.map(item => {
-                  const children = note.checklist.filter(i => i.parentId === item.id && i.style !== "bullet");
-                  const row = (task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-12 items-center gap-3 py-2 ${child ? "ml-8" : ""}`}>
-                    <input type="checkbox" checked={task.completed} onChange={() => patchItem(note, task.id, { completed: !task.completed })} className="h-4 w-4 accent-primary" />
-                    <input value={task.text} onChange={e => patchItem(note, task.id, { text: e.target.value })} className={`min-w-0 flex-1 bg-transparent text-sm outline-none ${task.completed ? "line-through text-muted-foreground" : ""}`} />
-                    {task.dueAt && <span className="flex items-center gap-1 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" />{format(new Date(task.dueAt), task.hasTime ? "d MMM · HH:mm" : "d MMM", { locale: es })}</span>}
-                    <select value={task.priority ?? ""} onChange={e => patchItem(note, task.id, { priority: (e.target.value || undefined) as ChecklistItem["priority"] })} className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground">
-                      <option value="">Prioridad</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option>
-                    </select>
-                    {task.priority && <span className="sr-only"><Flag />{priorityLabel[task.priority]}</span>}
-                  </div>;
-                  return <div key={item.id}>{row(item)}{children.map(child => row(child, true))}</div>;
-                })}</div>}
-              </article>
-            );
-          })}
-          {listNotes.length === 0 && <div className="py-24 text-center text-muted-foreground"><ListChecks className="mx-auto mb-3 h-8 w-8" /><p>Aún no has añadido notas. Abre una nota y pulsa «Añadir a Tasks».</p></div>}
+          {entries.map(e => (
+            <article key={e.kind === "task" ? e.note.id : `${e.note.id}-${e.item.id}`} className="rounded-lg border border-border bg-card shadow-soft">
+              <header className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
+                {e.kind === "task"
+                  ? <><ListChecks className="text-primary" /><h3 className="flex-1 font-display font-semibold">{e.note.title}</h3>{meta(e.priority, e.dueAt, e.note.calendarHasTime)}</>
+                  : <><input type="checkbox" checked={e.item.completed} onChange={() => patchItem(e.note, e.item.id, { completed: !e.item.completed })} className="h-4 w-4 accent-primary" />
+                    <h3 className={`flex-1 font-display font-semibold ${e.item.completed ? "line-through text-muted-foreground" : ""}`}>{e.item.text} <span className="ml-1 rounded bg-muted px-1.5 py-0.5 font-body text-[10px] font-normal text-muted-foreground">{e.note.title}</span></h3>{meta(e.priority, e.dueAt, e.item.hasTime)}</>}
+                <Button variant="ghost" size="sm" onClick={() => onOpenNote(e.note.id)}><ExternalLink /> Ver nota</Button>
+              </header>
+              <div className="divide-y divide-border/70 px-3">
+                {e.kind === "task"
+                  ? e.note.checklist.filter(isSubtask).map(s => <div key={s.id}>{row(e.note, s)}{itemsOf(e.note, s.id).map(c => row(e.note, c, true))}</div>)
+                  : itemsOf(e.note, e.item.id).map(c => row(e.note, c, true))}
+              </div>
+            </article>
+          ))}
+          {entries.length === 0 && <div className="py-24 text-center text-muted-foreground"><ListChecks className="mx-auto mb-3 h-8 w-8" /><p>No hay tareas ni subtareas con fecha o prioridad.</p></div>}
         </div>
       </div>
     </section>
