@@ -5,9 +5,11 @@ import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Flag, X } from "
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { ChecklistItem, Note } from "@/types/notes";
+import { datedEntries, NOTE_CALENDAR_ENTRY } from "@/lib/taskMetadata";
+import { DateControl, PriorityControl } from "./TaskMetaControls";
 
-interface PlannerViewProps { onOpenNote: (id: string) => void; }
-const NOTE_ENTRY = "__note__";
+interface PlannerViewProps { onOpenNote: (id: string, subtaskId?: string) => void; }
+const NOTE_ENTRY = NOTE_CALENDAR_ENTRY;
 type CalendarTask = { note: Note; item: ChecklistItem };
 
 const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
@@ -15,10 +17,7 @@ const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
   const [mode, setMode] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState<CalendarTask | null>(null);
-  const tasks = useMemo(() => notes.filter(n => n.inCalendar).flatMap(note => [
-    ...(note.calendarAt ? [{ note, item: { id: NOTE_ENTRY, text: note.title, completed: false, dueAt: note.calendarAt, hasTime: note.calendarHasTime } as ChecklistItem }] : []),
-    ...note.checklist.filter(i => i.dueAt && !i.parentId && i.style !== "bullet").map(item => ({ note, item })),
-  ]), [notes]);
+  const tasks = useMemo(() => datedEntries(notes), [notes]);
   const range = mode === "month"
     ? { start: startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 }) }
     : { start: startOfWeek(cursor, { weekStartsOn: 1 }), end: endOfWeek(cursor, { weekStartsOn: 1 }) };
@@ -30,10 +29,10 @@ const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
     setSelected(prev => prev ? { ...prev, item: { ...prev.item, ...patch } } : null);
   };
   return (
-    <section className="h-full overflow-y-auto bg-background px-6 py-6 scrollbar-thin">
+    <section className="h-full overflow-y-auto bg-background px-3 pb-6 pt-16 md:px-6 md:py-6 scrollbar-thin">
       <div className="mx-auto max-w-7xl">
         <header className="mb-5 flex flex-wrap items-center gap-3">
-          <div className="mr-auto"><h2 className="text-3xl font-semibold">Planificador</h2><p className="mt-1 text-sm text-muted-foreground">Notas añadidas al calendario y sus tareas con fecha</p></div>
+          <div className="mr-auto"><h2 className="text-3xl font-semibold">Planificador</h2></div>
           <Button variant="outline" onClick={() => setCursor(new Date())}>Hoy</Button>
           <div className="flex rounded-md border border-border bg-card p-0.5"><Button variant={mode === "month" ? "secondary" : "ghost"} size="sm" onClick={() => setMode("month")}>Mes</Button><Button variant={mode === "week" ? "secondary" : "ghost"} size="sm" onClick={() => setMode("week")}>Semana</Button></div>
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Anterior"><ChevronLeft /></Button><Button variant="ghost" size="icon" onClick={() => navigate(1)} aria-label="Siguiente"><ChevronRight /></Button>
@@ -54,7 +53,20 @@ const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
         <header className="mb-4 flex items-start gap-3"><CalendarDays className="mt-1 text-primary" /><div className="min-w-0 flex-1"><h3 className="font-display text-xl font-semibold">{selected.item.text}</h3><p className="text-sm text-muted-foreground">{selected.note.title}</p></div><Button variant="ghost" size="icon" onClick={() => setSelected(null)} aria-label="Cerrar"><X /></Button></header>
         {selected.item.notes && <p className="mb-4 whitespace-pre-wrap text-sm text-muted-foreground">{selected.item.notes}</p>}
         <div className="mb-5 flex items-center gap-2 text-sm"><CalendarDays className="h-4 w-4" />{selected.item.dueAt && format(new Date(selected.item.dueAt), selected.item.hasTime ? "EEEE d MMMM · HH:mm" : "EEEE d MMMM", { locale: es })}</div>
-        <div className="flex flex-wrap items-center justify-between gap-2">{selected.item.id !== NOTE_ENTRY && <select value={selected.item.priority ?? ""} onChange={e => patchSelected({ priority: (e.target.value || undefined) as ChecklistItem["priority"] })} className="h-9 rounded-md border border-input bg-background px-3 text-sm"><option value="">Sin prioridad</option><option value="high">Prioridad alta</option><option value="medium">Prioridad media</option><option value="low">Prioridad baja</option></select>}<Button variant="ghost" onClick={() => { setViewMembership(selected.note.id, { inCalendar: false }); setSelected(null); }}><X /> Quitar del calendario</Button><Button onClick={() => { const id = selected.note.id; setSelected(null); onOpenNote(id); }}><ExternalLink /> Ver nota</Button></div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <DateControl dueAt={selected.item.dueAt} hasTime={selected.item.hasTime} onDateChange={(dueAt, hasTime) => {
+            if (selected.item.id === NOTE_ENTRY) {
+              setViewMembership(selected.note.id, { calendarAt: dueAt, calendarHasTime: hasTime, inCalendar: !!dueAt });
+              setSelected(previous => previous ? { ...previous, item: { ...previous.item, dueAt, hasTime } } : null);
+            } else patchSelected({ dueAt, hasTime });
+            if (!dueAt) setSelected(null);
+          }} />
+          <PriorityControl priority={selected.item.priority} onChange={priority => {
+            if (selected.item.id === NOTE_ENTRY) { updateNote(selected.note.id, { priority }); setSelected(previous => previous ? { ...previous, item: { ...previous.item, priority: priority ?? undefined } } : null); }
+            else patchSelected({ priority: priority ?? undefined });
+          }} />
+          <Button onClick={() => { const { note, item } = selected; setSelected(null); onOpenNote(note.id, item.id === NOTE_ENTRY ? undefined : item.id); }}><ExternalLink /> Ver nota</Button>
+        </div>
       </div></div>}
     </section>
   );

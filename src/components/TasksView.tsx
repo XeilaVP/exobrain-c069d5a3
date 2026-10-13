@@ -7,6 +7,7 @@ import { prioritizedEntries, itemsOf, isSubtask } from "@/lib/taskLevels";
 import { sortChecklistByCompletion } from "@/lib/checklistOrder";
 import { destinationForEntry, initialExpandedEntries, patchChecklistItem } from "@/lib/taskNavigation";
 import TaskMetaControls from "@/components/TaskMetaControls";
+import EditableChecklistText from "@/components/EditableChecklistText";
 
 interface TasksViewProps { onOpenNote: (id: string, subtaskId?: string) => void; }
 const TasksView = ({ onOpenNote }: TasksViewProps) => {
@@ -38,7 +39,7 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
   />;
   const row = (note: Note, task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-10 items-center gap-3 py-1.5 ${child ? "ml-7" : ""}`}>
     <input type="checkbox" checked={task.completed} onChange={() => patchItem(note, task.id, { completed: !task.completed })} className="h-4 w-4 accent-primary" />
-    {child ? <span className={`min-w-0 flex-1 text-sm ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.text}</span>
+    {child ? <EditableChecklistText text={task.text} completed={task.completed} onSave={text => patchItem(note, task.id, { text })} />
       : <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 px-0 text-left font-normal" onClick={() => onOpenNote(note.id, task.id)}><span className={`truncate ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.text}</span><SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" /></Button>}
     {!child && controlsForItem(note, task)}
   </div>;

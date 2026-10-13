@@ -49,6 +49,7 @@ const SubtaskDetails = ({ noteId, subtaskId, onNavigate, onBack, onClose }: Subt
     onAddSubtask={text => saveChildren([...children, { id: crypto.randomUUID(), text, completed: false, parentId: subtaskId }])}
     onToggleSubtask={id => saveChildren(sortChecklistByCompletion(children.map(i => i.id === id ? { ...i, completed: !i.completed } : i)))}
     onDeleteSubtask={id => saveChildren(children.filter(i => i.id !== id))}
+    onEditSubtask={(id, text) => saveChildren(patchChecklistItem(children, id, { text }))}
     onMoveSubtask={(id, direction) => {
       const from = children.findIndex(i => i.id === id);
       const to = from + direction;

@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
-import { X, Calendar as CalendarIcon, Clock, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, Dot, ListChecks, Copy } from "lucide-react";
+import { X, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, Dot, ListChecks, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChecklistItem } from "@/types/notes";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { DateControl, PriorityControl } from "./TaskMetaControls";
+import EditableChecklistText from "./EditableChecklistText";
 
-const SubtaskRow = ({ item, onToggle, onDelete }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void }) => {
+const SubtaskRow = ({ item, onToggle, onDelete, onEdit }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void; onEdit: (text: string) => void }) => {
   const controls = useDragControls();
   return (
     <Reorder.Item
@@ -29,9 +31,7 @@ const SubtaskRow = ({ item, onToggle, onDelete }: { item: ChecklistItem; onToggl
         className="text-primary min-h-11 min-w-11 flex items-center justify-center">
         {item.completed ? <CheckSquare size={18} /> : <Square size={18} />}
       </button>
-      <span className={`flex-1 text-sm font-body ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-        {item.text}
-      </span>
+      <EditableChecklistText text={item.text} completed={item.completed} onSave={onEdit} />
       <button onClick={onDelete} aria-label="Borrar"
         className="text-destructive min-h-11 min-w-11 flex items-center justify-center">
         <Trash2 size={16} />
@@ -50,6 +50,7 @@ interface TaskSheetProps {
   onAddSubtask: (text: string) => void;
   onToggleSubtask: (id: string) => void;
   onDeleteSubtask: (id: string) => void;
+  onEditSubtask: (id: string, text: string) => void;
   onMoveSubtask: (id: string, dir: -1 | 1) => void;
   onReorderSubtasks?: (newOrder: ChecklistItem[]) => void;
   onClose: () => void;
@@ -60,7 +61,7 @@ interface TaskSheetProps {
 
 const TaskSheet = ({
   open, noteId, task, allItems, onChange, onDelete,
-  onAddSubtask, onToggleSubtask, onDeleteSubtask, onMoveSubtask, onReorderSubtasks, onClose,
+  onAddSubtask, onToggleSubtask, onDeleteSubtask, onEditSubtask, onMoveSubtask, onReorderSubtasks, onClose,
   navigation, relatedNotes, checklistItems = false,
 }: TaskSheetProps) => {
   const [title, setTitle] = useState("");
@@ -88,26 +89,6 @@ const TaskSheet = ({
   };
 
   const dueDate = task.dueAt ? new Date(task.dueAt) : null;
-  const setDate = (dateStr: string) => {
-    if (!dateStr) { onChange({ dueAt: null, hasTime: false }); return; }
-    // Preserve time if hasTime
-    if (task.hasTime && dueDate) {
-      const d = new Date(dateStr);
-      d.setHours(dueDate.getHours(), dueDate.getMinutes(), 0, 0);
-      onChange({ dueAt: d.toISOString() });
-    } else {
-      const d = new Date(dateStr + "T00:00:00");
-      onChange({ dueAt: d.toISOString() });
-    }
-  };
-  const setTime = (timeStr: string) => {
-    if (!timeStr) { onChange({ hasTime: false }); return; }
-    const base = dueDate ?? new Date();
-    const [h, m] = timeStr.split(":").map(Number);
-    base.setHours(h, m, 0, 0);
-    onChange({ dueAt: base.toISOString(), hasTime: true });
-  };
-
   const addSub = () => {
     const t = newSub.trim();
     if (!t) return;
@@ -203,42 +184,12 @@ const TaskSheet = ({
               </div>
 
               {/* Date + time (task style only) */}
-              {task.style !== "bullet" && (
+              {task.style !== "bullet" && !task.parentId && (
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Fecha</label>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-2 mt-1">
-                  <div className="relative flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
-                    <CalendarIcon size={16} className="text-muted-foreground mr-1" />
-                    <input
-                      type="date"
-                      value={dueDate ? format(dueDate, "yyyy-MM-dd") : ""}
-                      onChange={e => setDate(e.target.value)}
-                      className="min-w-0 w-full bg-transparent outline-none text-sm text-foreground font-body py-2"
-                    />
-                    {dueDate && (
-                      <button onClick={() => onChange({ dueAt: null, hasTime: false })}
-                        aria-label="Quitar fecha" className="ml-1 shrink-0 text-muted-foreground min-h-9 w-5 flex items-center justify-center">
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-                  {dueDate && (
-                    <div className="flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
-                      <Clock size={16} className="text-muted-foreground mr-1" />
-                      <input
-                        type="time"
-                        value={task.hasTime && dueDate ? format(dueDate, "HH:mm") : ""}
-                        onChange={e => setTime(e.target.value)}
-                        className="min-w-0 w-full bg-transparent outline-none text-sm text-foreground font-body py-2"
-                      />
-                      {task.hasTime && (
-                        <button onClick={() => onChange({ hasTime: false })}
-                          aria-label="Quitar hora" className="ml-1 shrink-0 text-muted-foreground min-h-9 w-5 flex items-center justify-center">
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-                  )}
+                <div className="flex min-w-0 flex-wrap items-center gap-2 mt-1">
+                  <DateControl dueAt={task.dueAt} hasTime={task.hasTime} onDateChange={(dueAt, hasTime) => onChange({ dueAt, hasTime })} />
+                  <PriorityControl priority={task.priority} onChange={priority => onChange({ priority: priority ?? undefined })} />
                 </div>
                 {dueDate && (
                   <p className="text-xs text-muted-foreground font-body mt-1.5">
@@ -266,6 +217,7 @@ const TaskSheet = ({
                       item={s}
                       onToggle={() => onToggleSubtask(s.id)}
                       onDelete={() => onDeleteSubtask(s.id)}
+                      onEdit={text => onEditSubtask(s.id, text)}
                     />
                   ))}
                 </Reorder.Group>

@@ -42,7 +42,7 @@ export const PriorityControl = ({ priority, onChange }: { priority?: Priority | 
         {priority ? priorityLabel[priority] : "Prioridad"}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="start">
+    <DropdownMenuContent align="start" className="z-[80]">
       <DropdownMenuItem onSelect={() => onChange(null)}>Sin prioridad</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => onChange("high")}><Flag className="mr-2 h-4 w-4" />Alta</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => onChange("medium")}><Flag className="mr-2 h-4 w-4" />Media</DropdownMenuItem>
@@ -51,7 +51,7 @@ export const PriorityControl = ({ priority, onChange }: { priority?: Priority | 
   </DropdownMenu>
 );
 
-const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityChange }: TaskMetaControlsProps) => {
+export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaControlsProps, "dueAt" | "hasTime" | "onDateChange">) => {
   const [open, setOpen] = useState(false);
   const [withTime, setWithTime] = useState(!!hasTime);
   const [value, setValue] = useState(localValue(dueAt, hasTime));
@@ -66,7 +66,6 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
     : "Añadir fecha";
 
   return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
       <Popover open={open} onOpenChange={(nextOpen) => {
         if (nextOpen) { setValue(localValue(dueAt, hasTime)); setWithTime(!!hasTime); }
         setOpen(nextOpen);
@@ -77,7 +76,7 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
             <span className="whitespace-nowrap">{dateLabel}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-72 space-y-3 p-3">
+        <PopoverContent align="start" className="z-[80] w-72 space-y-3 p-3">
           <input
             type={withTime ? "datetime-local" : "date"}
             aria-label="Fecha y hora"
@@ -100,9 +99,14 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
         </PopoverContent>
       </Popover>
 
-      <PriorityControl priority={priority} onChange={onPriorityChange} />
-    </div>
   );
 };
+
+const TaskMetaControls = ({ priority, onPriorityChange, ...dateProps }: TaskMetaControlsProps) => (
+  <div className="flex min-w-0 flex-col items-start gap-1">
+    <DateControl {...dateProps} />
+    <PriorityControl priority={priority} onChange={onPriorityChange} />
+  </div>
+);
 
 export default TaskMetaControls;
