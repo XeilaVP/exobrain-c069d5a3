@@ -1,7 +1,7 @@
 import { toggleAndSort } from "@/lib/checklistOrder";
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, MoreHorizontal, Dot, Move, Palette } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion, Reorder, useDragControls } from "framer-motion";
@@ -126,8 +126,9 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
           <span className={`block text-[15px] font-body leading-snug break-words ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
             {item.text || <span className="italic text-muted-foreground/60">Sin título</span>}
           </span>
-          {subtaskCount > 0 && (
-            <span className="flex items-center gap-2 mt-0.5 text-[11px] font-body text-muted-foreground">
+          {(item.dueAt || subtaskCount > 0) && (
+            <span className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] font-body text-muted-foreground">
+              {item.dueAt && <span className={`inline-flex items-center gap-0.5 whitespace-nowrap ${overdue ? "text-destructive" : ""}`}><CalendarIcon size={11} />{dueLabel(item.dueAt, item.hasTime)}</span>}
               {subtaskCount > 0 && (
                 <span className="inline-flex items-center gap-0.5">
                   <CornerDownRight size={11} />{subtaskCount}

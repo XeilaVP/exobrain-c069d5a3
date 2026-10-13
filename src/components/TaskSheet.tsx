@@ -206,34 +206,34 @@ const TaskSheet = ({
               {task.style !== "bullet" && (
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Fecha</label>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <div className="relative flex items-center bg-muted rounded-md px-2 min-h-11">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-2 mt-1">
+                  <div className="relative flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
                     <CalendarIcon size={16} className="text-muted-foreground mr-1" />
                     <input
                       type="date"
                       value={dueDate ? format(dueDate, "yyyy-MM-dd") : ""}
                       onChange={e => setDate(e.target.value)}
-                      className="bg-transparent outline-none text-sm text-foreground font-body py-2"
+                      className="min-w-0 w-full bg-transparent outline-none text-sm text-foreground font-body py-2"
                     />
                     {dueDate && (
                       <button onClick={() => onChange({ dueAt: null, hasTime: false })}
-                        aria-label="Quitar fecha" className="ml-1 text-muted-foreground min-h-9 min-w-9 flex items-center justify-center">
+                        aria-label="Quitar fecha" className="ml-1 shrink-0 text-muted-foreground min-h-9 w-5 flex items-center justify-center">
                         <X size={14} />
                       </button>
                     )}
                   </div>
                   {dueDate && (
-                    <div className="flex items-center bg-muted rounded-md px-2 min-h-11">
+                    <div className="flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
                       <Clock size={16} className="text-muted-foreground mr-1" />
                       <input
                         type="time"
                         value={task.hasTime && dueDate ? format(dueDate, "HH:mm") : ""}
                         onChange={e => setTime(e.target.value)}
-                        className="bg-transparent outline-none text-sm text-foreground font-body py-2"
+                        className="min-w-0 w-full bg-transparent outline-none text-sm text-foreground font-body py-2"
                       />
                       {task.hasTime && (
                         <button onClick={() => onChange({ hasTime: false })}
-                          aria-label="Quitar hora" className="ml-1 text-muted-foreground min-h-9 min-w-9 flex items-center justify-center">
+                          aria-label="Quitar hora" className="ml-1 shrink-0 text-muted-foreground min-h-9 w-5 flex items-center justify-center">
                           <X size={14} />
                         </button>
                       )}

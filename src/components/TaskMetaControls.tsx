@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarDays, Flag } from "lucide-react";
 import type { ChecklistItem } from "@/types/notes";
+import { dateInputToISO } from "@/lib/taskMetadata";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -33,19 +34,31 @@ const localValue = (iso?: string | null, hasTime?: boolean) => {
   return format(new Date(iso), hasTime ? "yyyy-MM-dd'T'HH:mm" : "yyyy-MM-dd");
 };
 
+export const PriorityControl = ({ priority, onChange }: { priority?: Priority | null; onChange: (priority: Priority | null) => void }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="ghost" size="sm" aria-label={`Prioridad: ${priority ? priorityLabel[priority] : "sin prioridad"}`} className="h-7 justify-start gap-1 px-1.5 text-xs font-normal text-muted-foreground">
+        <Flag className="h-3.5 w-3.5" />
+        {priority ? priorityLabel[priority] : "Prioridad"}
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="start">
+      <DropdownMenuItem onSelect={() => onChange(null)}>Sin prioridad</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => onChange("high")}><Flag className="mr-2 h-4 w-4" />Alta</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => onChange("medium")}><Flag className="mr-2 h-4 w-4" />Media</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => onChange("low")}><Flag className="mr-2 h-4 w-4" />Baja</DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
 const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityChange }: TaskMetaControlsProps) => {
+  const [open, setOpen] = useState(false);
   const [withTime, setWithTime] = useState(!!hasTime);
   const [value, setValue] = useState(localValue(dueAt, hasTime));
 
   const saveDate = () => {
-    if (!value) {
-      onDateChange(null, false);
-      return;
-    }
-    const normalized = withTime
-      ? new Date(value).toISOString()
-      : new Date(`${value.slice(0, 10)}T12:00:00`).toISOString();
-    onDateChange(normalized, withTime);
+    onDateChange(dateInputToISO(value, withTime), !!value && withTime);
+    setOpen(false);
   };
 
   const dateLabel = dueAt
@@ -54,7 +67,10 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
 
   return (
     <div className="flex min-w-0 flex-col items-start gap-1">
-      <Popover>
+      <Popover open={open} onOpenChange={(nextOpen) => {
+        if (nextOpen) { setValue(localValue(dueAt, hasTime)); setWithTime(!!hasTime); }
+        setOpen(nextOpen);
+      }}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="sm" className="h-7 max-w-full justify-start gap-1 px-1.5 text-xs font-normal text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" />
@@ -64,35 +80,27 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
         <PopoverContent align="start" className="w-72 space-y-3 p-3">
           <input
             type={withTime ? "datetime-local" : "date"}
-            value={withTime && value.length === 10 ? `${value}T09:00` : value}
+            aria-label="Fecha y hora"
+            value={withTime ? (value.length === 10 ? `${value}T09:00` : value) : value.slice(0, 10)}
             onChange={(event) => setValue(event.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
           />
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={withTime} onChange={(event) => setWithTime(event.target.checked)} className="accent-primary" />
+            <input type="checkbox" checked={withTime} onChange={(event) => {
+              const nextWithTime = event.target.checked;
+              setWithTime(nextWithTime);
+              setValue(previous => nextWithTime && previous.length === 10 ? `${previous}T09:00` : nextWithTime ? previous : previous.slice(0, 10));
+            }} className="accent-primary" />
             Con hora
           </label>
           <div className="flex justify-end gap-2">
-            {dueAt && <Button variant="ghost" size="sm" onClick={() => { setValue(""); onDateChange(null, false); }}>Quitar</Button>}
+            {dueAt && <Button variant="ghost" size="sm" onClick={() => { onDateChange(null, false); setOpen(false); }}>Quitar</Button>}
             <Button size="sm" onClick={saveDate}>Guardar</Button>
           </div>
         </PopoverContent>
       </Popover>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-7 justify-start gap-1 px-1.5 text-xs font-normal text-muted-foreground">
-            <Flag className="h-3.5 w-3.5" />
-            {priority ? priorityLabel[priority] : "Prioridad"}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onSelect={() => onPriorityChange(null)}>Sin prioridad</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onPriorityChange("high")}><Flag className="mr-2 h-4 w-4" />Alta</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onPriorityChange("medium")}><Flag className="mr-2 h-4 w-4" />Media</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onPriorityChange("low")}><Flag className="mr-2 h-4 w-4" />Baja</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <PriorityControl priority={priority} onChange={onPriorityChange} />
     </div>
   );
 };

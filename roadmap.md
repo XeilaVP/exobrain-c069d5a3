@@ -14,3 +14,6 @@
 - [x] Plegar Tasks y ramas por defecto
 - [x] Abrir subtareas directamente con migas y navegación a madre/enlazadas
 - [x] Verificar navegación y edición sin duplicar datos
+- [ ] Retirar Google Calendar de la interfaz y mover prioridad a Tasks y Post-its
+- [ ] Separar apertura, desplegado y edición compacta de fecha/hora y prioridad
+- [ ] Verificar persistencia y presentación en móvil y escritorio

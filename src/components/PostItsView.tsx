@@ -4,6 +4,8 @@ import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Note } from "@/types/notes";
+import { PriorityControl } from "@/components/TaskMetaControls";
+import { postItPriorityRank } from "@/lib/taskMetadata";
 
 interface PostItsViewProps { onOpenNote: (id: string) => void; }
 
@@ -14,16 +16,9 @@ const plainText = (html: string) => {
   return documentNode.body.textContent?.trim() ?? "";
 };
 
-const PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
 const noteDue = (note: Note) => {
   const dates = note.checklist.filter(i => !i.completed && i.dueAt).map(i => new Date(i.dueAt as string).getTime()).filter(t => !Number.isNaN(t));
   return dates.length ? Math.min(...dates) : Number.POSITIVE_INFINITY;
-};
-
-const notePriority = (note: Note) => {
-  const ranks = note.checklist.filter(i => !i.completed && i.priority).map(i => PRIORITY_RANK[i.priority as string]);
-  return ranks.length ? Math.min(...ranks) : Number.POSITIVE_INFINITY;
 };
 
 const NotePreview = ({ note }: { note: Note }) => note.noteType === "checklist" ? (
@@ -31,7 +26,7 @@ const NotePreview = ({ note }: { note: Note }) => note.noteType === "checklist" 
 ) : <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{plainText(note.content) || "Sin contenido"}</p>;
 
 const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
-  const { notes: allNotes, setViewMembership } = useNotes();
+  const { notes: allNotes, setViewMembership, updateNote } = useNotes();
   const notes = useMemo(() => allNotes.filter(n => n.inPostits), [allNotes]);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("updated");
@@ -64,7 +59,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
       case "created": return list.sort((a, b) => byDate(a.createdAt, b.createdAt));
       case "title": return list.sort((a, b) => a.title.localeCompare(b.title, "es"));
       case "due": return list.sort((a, b) => noteDue(a) - noteDue(b) || byDate(a.updatedAt, b.updatedAt));
-      case "priority": return list.sort((a, b) => notePriority(a) - notePriority(b) || byDate(a.updatedAt, b.updatedAt));
+      case "priority": return list.sort((a, b) => postItPriorityRank(a) - postItPriorityRank(b) || byDate(a.updatedAt, b.updatedAt));
       default: return list.sort((a, b) => byDate(a.updatedAt, b.updatedAt));
     }
   }, [notes, descendants, sortBy]);
@@ -112,9 +107,11 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
         </div>
 
         <div className="columns-2 gap-4 xl:columns-3 2xl:columns-4">
-          {visible.map(note => <button key={note.id} onClick={() => setPreviewId(note.id)} className="mb-4 block w-full break-inside-avoid rounded-lg border border-border bg-card p-4 text-left shadow-soft transition-transform hover:-translate-y-0.5" style={{ borderTopColor: note.color ? `hsl(${note.color})` : undefined, borderTopWidth: 4 }}>
-            <div className="mb-3 flex items-center gap-2"><span>{note.icon || (note.noteType === "checklist" ? "☑" : "•")}</span><h3 className="min-w-0 flex-1 truncate font-display text-lg font-semibold">{note.title}</h3>{note.noteType === "checklist" && <ListChecks className="h-4 w-4 text-muted-foreground" />}</div><NotePreview note={note} />
-          </button>)}
+          {visible.map(note => <article key={note.id} className="mb-4 block w-full break-inside-avoid rounded-lg border border-border bg-card p-4 text-left shadow-soft transition-transform hover:-translate-y-0.5" style={{ borderTopColor: note.color ? `hsl(${note.color})` : undefined, borderTopWidth: 4 }}>
+            <Button variant="ghost" onClick={() => setPreviewId(note.id)} className="mb-3 flex h-auto w-full items-center justify-start gap-2 px-0 hover:bg-transparent"><span>{note.icon || (note.noteType === "checklist" ? "☑" : "•")}</span><h3 className="min-w-0 flex-1 truncate text-left font-display text-lg font-semibold">{note.title}</h3>{note.noteType === "checklist" && <ListChecks className="h-4 w-4 text-muted-foreground" />}</Button>
+            <div role="button" tabIndex={0} onClick={() => setPreviewId(note.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPreviewId(note.id); } }}><NotePreview note={note} /></div>
+            <div className="mt-2"><PriorityControl priority={note.priority} onChange={priority => updateNote(note.id, { priority })} /></div>
+          </article>)}
         </div>
         {visible.length === 0 && <p className="py-24 text-center text-muted-foreground">Aún no hay post-its. Abre una nota y pulsa «Añadir a Post-its».</p>}
       </div>
@@ -122,6 +119,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
         <article className="max-h-[75vh] w-full max-w-xl overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-float" onClick={e => e.stopPropagation()} style={{ borderTopColor: preview.color ? `hsl(${preview.color})` : undefined, borderTopWidth: 5 }}>
           <header className="mb-5 flex items-center gap-3"><span className="text-xl">{preview.icon || "•"}</span><h3 className="min-w-0 flex-1 font-display text-2xl font-semibold">{preview.title}</h3><Button variant="ghost" size="icon" onClick={() => setPreviewId(null)} aria-label="Cerrar"><X /></Button></header>
           <NotePreview note={preview} />
+          <div className="mt-3"><PriorityControl priority={preview.priority} onChange={priority => updateNote(preview.id, { priority })} /></div>
           <div className="mt-6 flex justify-end gap-2"><Button variant="ghost" onClick={() => { setViewMembership(preview.id, { inPostits: false }); setPreviewId(null); }}><X /> Quitar de Post-its</Button><Button onClick={() => { setPreviewId(null); onOpenNote(preview.id); }}><ExternalLink /> Ver nota</Button></div>
         </article>
       </div>}
