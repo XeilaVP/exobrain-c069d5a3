@@ -18,6 +18,7 @@ const readView = (): WorkspaceView => {
 const AppShell = () => {
   const [view, setView] = useState<WorkspaceView>(readView);
   const [overlayNoteId, setOverlayNoteId] = useState<string | null>(null);
+  const [overlaySubtaskId, setOverlaySubtaskId] = useState<string | undefined>();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -32,8 +33,9 @@ const AppShell = () => {
     setMobileNavOpen(false);
   };
 
-  const openNote = (noteId: string) => {
+  const openNote = (noteId: string, subtaskId?: string) => {
     setOverlayNoteId(noteId);
+    setOverlaySubtaskId(subtaskId);
     setMobileNavOpen(false);
   };
 
@@ -76,7 +78,7 @@ const AppShell = () => {
         {view === "planner" && <PlannerView onOpenNote={openNote} />}
       </main>
       {view === "tree" && <ChatPanel />}
-      <NoteOverlay noteId={overlayNoteId} onClose={() => setOverlayNoteId(null)} />
+      <NoteOverlay noteId={overlayNoteId} subtaskId={overlaySubtaskId} onClose={() => { setOverlayNoteId(null); setOverlaySubtaskId(undefined); }} />
     </div>
   );
 };

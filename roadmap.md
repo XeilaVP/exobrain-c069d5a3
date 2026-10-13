@@ -11,3 +11,6 @@
 - [x] Unificar el shell responsive y eliminar la segunda instancia móvil del árbol
 - [x] Añadir navegación móvil a Árbol, Tasks, Post-its y Planificador
 - [x] Verificar tronco, ramas, drawer, chat y escritorio
+- [x] Plegar Tasks y ramas por defecto
+- [x] Abrir subtareas directamente con migas y navegación a madre/enlazadas
+- [x] Verificar navegación y edición sin duplicar datos
