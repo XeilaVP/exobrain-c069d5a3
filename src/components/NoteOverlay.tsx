@@ -1,25 +1,28 @@
 import { useEffect, useState } from "react";
 import NotePostIt from "./NotePostIt";
+import SubtaskDetails from "./SubtaskDetails";
+import type { NoteDestination } from "@/lib/taskNavigation";
 
 interface NoteOverlayProps {
   noteId: string | null;
+  subtaskId?: string;
   onClose: () => void;
 }
 
-const NoteOverlay = ({ noteId, onClose }: NoteOverlayProps) => {
-  const [current, setCurrent] = useState<string | null>(noteId);
-  const [history, setHistory] = useState<string[]>([]);
+const NoteOverlay = ({ noteId, subtaskId, onClose }: NoteOverlayProps) => {
+  const [current, setCurrent] = useState<NoteDestination | null>(noteId ? { noteId, subtaskId } : null);
+  const [history, setHistory] = useState<NoteDestination[]>([]);
 
   useEffect(() => {
-    setCurrent(noteId);
+    setCurrent(noteId ? { noteId, subtaskId } : null);
     setHistory([]);
-  }, [noteId]);
+  }, [noteId, subtaskId]);
 
   if (!noteId || !current) return null;
 
   const navigate = (id: string) => {
     setHistory(prev => [...prev, current]);
-    setCurrent(id);
+    setCurrent({ noteId: id });
   };
 
   const back = () => {
@@ -33,15 +36,22 @@ const NoteOverlay = ({ noteId, onClose }: NoteOverlayProps) => {
 
   return (
     <div className="fixed inset-0 z-40 bg-background/55 backdrop-blur-sm" onClick={onClose}>
-      <NotePostIt
-        key={current}
-        noteId={current}
+      {current.subtaskId ? <SubtaskDetails
+        key={`${current.noteId}-${current.subtaskId}`}
+        noteId={current.noteId}
+        subtaskId={current.subtaskId}
+        onClose={onClose}
+        onNavigate={navigate}
+        onBack={history.length ? back : undefined}
+      /> : <NotePostIt
+        key={current.noteId}
+        noteId={current.noteId}
         position={{ x: 0, y: 0 }}
         onClose={onClose}
         presentation="overlay"
         onNavigate={navigate}
         onBack={history.length ? back : undefined}
-      />
+      />}
     </div>
   );
 };

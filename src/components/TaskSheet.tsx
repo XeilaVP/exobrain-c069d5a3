@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { X, Calendar as CalendarIcon, Clock, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, CalendarPlus, CalendarCheck2, CalendarX, Dot, ListChecks, Copy, Flag } from "lucide-react";
 import { toast } from "sonner";
@@ -54,11 +54,15 @@ interface TaskSheetProps {
   onMoveSubtask: (id: string, dir: -1 | 1) => void;
   onReorderSubtasks?: (newOrder: ChecklistItem[]) => void;
   onClose: () => void;
+  navigation?: ReactNode;
+  relatedNotes?: ReactNode;
+  checklistItems?: boolean;
 }
 
 const TaskSheet = ({
   open, noteId, task, allItems, onChange, onDelete,
   onAddSubtask, onToggleSubtask, onDeleteSubtask, onMoveSubtask, onReorderSubtasks, onClose,
+  navigation, relatedNotes, checklistItems = false,
 }: TaskSheetProps) => {
   const gcal = useGoogleCalendar();
   const [title, setTitle] = useState("");
@@ -133,6 +137,7 @@ const TaskSheet = ({
             </div>
 
             {/* Header */}
+            {navigation}
             <div className="flex items-center gap-2 px-4 py-2 border-b border-border">
               {task.style === "bullet" ? (
                 <span className="text-primary min-h-11 min-w-11 flex items-center justify-center" aria-hidden>
@@ -317,7 +322,7 @@ const TaskSheet = ({
               {/* Subtasks */}
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body flex items-center gap-1">
-                  <CornerDownRight size={12} /> Subtareas {subtasks.length > 0 && <span className="text-muted-foreground/60">({subtasks.filter(s => s.completed).length}/{subtasks.length})</span>}
+                  <CornerDownRight size={12} /> {checklistItems ? "Checklist" : "Subtareas"} {subtasks.length > 0 && <span className="text-muted-foreground/60">({subtasks.filter(s => s.completed).length}/{subtasks.length})</span>}
                 </label>
                 <Reorder.Group
                   axis="y"
@@ -339,15 +344,16 @@ const TaskSheet = ({
                     value={newSub}
                     onChange={e => setNewSub(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addSub(); } }}
-                    placeholder="Añadir subtarea..."
+                    placeholder={checklistItems ? "Añadir item..." : "Añadir subtarea..."}
                     className="flex-1 bg-muted rounded-md text-sm px-3 py-2 min-h-11 outline-none text-foreground placeholder:text-muted-foreground font-body focus:ring-1 focus:ring-ring"
                   />
-                  <button onClick={addSub} aria-label="Añadir subtarea"
+                  <button onClick={addSub} aria-label={checklistItems ? "Añadir item" : "Añadir subtarea"}
                     className="rounded-md bg-primary text-primary-foreground min-h-11 min-w-11 flex items-center justify-center">
                     <Plus size={20} />
                   </button>
                 </div>
               </div>
+              {relatedNotes}
             </div>
           </motion.div>
         </motion.div>

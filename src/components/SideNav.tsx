@@ -3,6 +3,7 @@ import { CalendarDays, CheckSquare, ChevronDown, ChevronRight, Menu, Network, Se
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { Note } from "@/types/notes";
+import { initialExpandedEntries } from "@/lib/taskNavigation";
 
 export type WorkspaceView = "tree" | "tasks" | "postits" | "planner";
 
@@ -25,7 +26,7 @@ const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavP
   const { notes, brainName } = useNotes();
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(notes.filter(n => !n.parentNoteId).map(n => n.id)));
+  const [expanded, setExpanded] = useState<Set<string>>(initialExpandedEntries);
   const roots = useMemo(() => notes.filter(n => !n.parentNoteId), [notes]);
   const results = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("es");
