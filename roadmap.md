@@ -17,7 +17,7 @@
 - [x] Retirar Google Calendar de la interfaz y mover prioridad a Tasks y Post-its
 - [x] Separar apertura, desplegado y edición compacta de fecha/hora y prioridad
 - [x] Verificar persistencia y presentación en móvil y escritorio
-- [ ] Unificar selector de fecha con hora opcional y prioridad dentro de notas
-- [ ] Editar items por clic sin interferir con arrastre, completado ni borrado
-- [ ] Derivar Calendario de fechas individuales y simplificar pertenencia a vistas
-- [ ] Verificar edición, calendario automático y persistencia
+- [x] Unificar selector de fecha con hora opcional y prioridad dentro de notas
+- [x] Editar items por clic sin interferir con arrastre, completado ni borrado
+- [x] Derivar Calendario de fechas individuales y simplificar pertenencia a vistas
+- [x] Verificar edición, calendario automático y persistencia
