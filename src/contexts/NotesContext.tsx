@@ -125,6 +125,7 @@ const dbToNote = (row: any): Note => ({
   inCalendar: row.in_calendar ?? false,
   calendarAt: row.calendar_at ?? null,
   calendarHasTime: row.calendar_has_time ?? false,
+  priority: (row.priority ?? null) as Note["priority"],
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -244,6 +245,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.linkedNoteIds !== undefined) dbUpdates.linked_note_ids = updates.linkedNoteIds;
       if ((updates as any).icon !== undefined) dbUpdates.icon = (updates as any).icon;
       if (updates.color !== undefined) dbUpdates.color = updates.color;
+      if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
       await supabase.from("notes").update(dbUpdates).eq("id", id);
     }, 500);
   }, []);
