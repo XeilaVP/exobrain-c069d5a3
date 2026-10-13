@@ -1,4 +1,4 @@
-import type { Note } from "@/types/notes";
+import type { Note, ChecklistItem } from "@/types/notes";
 
 const ranks: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
@@ -13,4 +13,12 @@ export function postItPriorityRank(note: Note): number {
 export function dateInputToISO(value: string, withTime: boolean): string | null {
   if (!value) return null;
   return new Date(withTime ? value : `${value.slice(0, 10)}T12:00:00`).toISOString();
+}
+
+export const NOTE_CALENDAR_ENTRY = "__note__";
+export function datedEntries(notes: Note[]): { note: Note; item: ChecklistItem }[] {
+  return notes.flatMap(note => [
+    ...(note.calendarAt ? [{ note, item: { id: NOTE_CALENDAR_ENTRY, text: note.title, completed: false, dueAt: note.calendarAt, hasTime: note.calendarHasTime, priority: note.priority ?? undefined } }] : []),
+    ...note.checklist.filter(item => item.dueAt && !item.parentId && item.style !== "bullet").map(item => ({ note, item })),
+  ]);
 }

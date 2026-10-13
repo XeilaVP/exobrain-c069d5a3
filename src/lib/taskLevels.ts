@@ -14,7 +14,7 @@ export function prioritizedEntries(notes: Note[]): PriorityEntry[] {
   const out: PriorityEntry[] = [];
   for (const note of notes) {
     if (note.noteType !== "checklist") continue;
-    const noteDue = note.inCalendar ? note.calendarAt ?? null : null;
+    const noteDue = note.calendarAt ?? null;
     if (note.priority || noteDue) { out.push({ kind: "task", note, priority: note.priority, dueAt: noteDue }); continue; }
     for (const item of note.checklist) {
       if (isSubtask(item) && (item.priority || item.dueAt)) out.push({ kind: "subtask", note, item, priority: item.priority, dueAt: item.dueAt });
