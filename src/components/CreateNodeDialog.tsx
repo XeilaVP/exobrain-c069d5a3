@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { FileText, ListChecks } from "lucide-react";
 import { Note } from "@/types/notes";
 import ColorPicker from "./ColorPicker";
@@ -7,6 +8,7 @@ import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 interface Props {
   open: boolean;
+  childOnly?: boolean;
   notes: Note[];
   brainName: string;
   defaultParentId?: string | null;
@@ -14,7 +16,7 @@ interface Props {
   onCancel: () => void;
 }
 
-const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, onCreateNote, onCancel }: Props) => {
+const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, childOnly = false, onCreateNote, onCancel }: Props) => {
   const [noteType, setNoteType] = useState<"text" | "checklist">("text");
   const [name, setName] = useState("");
   const [color, setColor] = useState(DEFAULT_CATEGORY_COLOR);
@@ -67,7 +69,7 @@ const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, onCreateNot
         role="dialog"
       >
         <h3 className="font-display text-base font-semibold text-foreground">
-          {noteType === "checklist" ? "Nueva lista de tareas" : "Nueva nota"}
+          {childOnly ? "Crear hija" : noteType === "checklist" ? "Nueva lista de tareas" : "Nueva nota"}
         </h3>
 
         <input
@@ -80,17 +82,17 @@ const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, onCreateNot
         />
 
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={() => setNoteType("text")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs border ${noteType === "text" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
-          ><FileText size={14} />Texto</button>
-          <button
+          ><FileText size={14} />Texto</Button>
+          <Button
             onClick={() => setNoteType("checklist")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs border ${noteType === "checklist" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
-          ><ListChecks size={14} />Tasks</button>
+          ><ListChecks size={14} />Tasks</Button>
         </div>
 
-        <label className="block">
+        {!childOnly && <label className="block">
           <span className="text-xs text-muted-foreground">Cuelga de</span>
           <select
             value={parentNoteId}
@@ -102,7 +104,7 @@ const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, onCreateNot
               <option key={o.id} value={o.id}>{o.label}</option>
             ))}
           </select>
-        </label>
+        </label>}
 
         {!parentNoteId && (
           <div>
@@ -112,8 +114,8 @@ const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, onCreateNot
         )}
 
         <div className="flex gap-2 justify-end">
-          <button onClick={onCancel} className="px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs text-muted-foreground hover:bg-muted">Cancelar</button>
-          <button onClick={submit} disabled={!name.trim()} className="px-4 py-2 min-h-11 md:min-h-0 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40">Crear</button>
+          <Button onClick={onCancel} className="px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs text-muted-foreground hover:bg-muted">Cancelar</Button>
+          <Button onClick={submit} disabled={!name.trim()} className="px-4 py-2 min-h-11 md:min-h-0 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40">Crear</Button>
         </div>
       </motion.div>
     </div>

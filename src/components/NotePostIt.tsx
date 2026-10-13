@@ -1,13 +1,15 @@
 import { toggleAndSort } from "@/lib/checklistOrder";
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Heart } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion, Reorder, useDragControls } from "framer-motion";
 import { toast } from "sonner";
 import RichTextEditor from "./RichTextEditor";
-import NameInputDialog from "./NameInputDialog";
+import CreateNodeDialog from "./CreateNodeDialog";
+import { Button } from "@/components/ui/button";
+import { plainNoteText } from "@/lib/noteActions";
 import TaskSheet from "./TaskSheet";
 import EmojiPicker from "./EmojiPicker";
 import MoveToDialog from "./MoveToDialog";
@@ -223,7 +225,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
     notes, updateNote, addChecklistItem, categories,
     getChildNotes, getLinkedNotes, getParentNote, setSelectedNoteId,
     linkNotes, unlinkNotes, addNote, deleteNote, getCategoryPath,
-    moveNote, brainName,
+    moveNote, brainName, duplicateNote,
   } = useNotes();
 
   const note = useMemo(() => notes.find(n => n.id === noteId), [notes, noteId]);
@@ -239,7 +241,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { attachments, uploading, uploadFile, deleteAttachment } = useNoteAttachments(noteId);
-  const [newChildDialog, setNewChildDialog] = useState<null | "text" | "checklist">(null);
+  const [newChildDialog, setNewChildDialog] = useState(false);
   const [sheetTaskId, setSheetTaskId] = useState<string | null>(null);
   const [movedDestination, setMovedDestination] = useState<{ noteId: string; subtaskId: string } | null>(null);
 
@@ -340,6 +342,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
           </button>
         )}
 
+        <Button variant="ghost" size="icon" className="shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0" title={note.isFavorite ? "Quitar de favoritas" : "Marcar favorita"} aria-label={note.isFavorite ? "Quitar de favoritas" : "Marcar favorita"} aria-pressed={!!note.isFavorite} onClick={() => updateNote(noteId, { isFavorite: !note.isFavorite })}><Heart className={note.isFavorite ? "fill-current text-primary" : "text-muted-foreground"} size={isMobile ? 22 : 16} /></Button>
         <div className="relative shrink-0">
           <button
             onClick={() => setShowNoteMenu((v) => !v)}
@@ -365,18 +368,9 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
               >
                 <Type size={14} /> Renombrar
               </button>
-              <button
-                onClick={() => { setNewChildDialog("text"); setShowNoteMenu(false); }}
-                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
-              >
-                <Type size={14} /> Añadir hija
-              </button>
-              <button
-                onClick={() => { setNewChildDialog("checklist"); setShowNoteMenu(false); }}
-                className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
-              >
-                <ListChecks size={14} /> Añadir lista hija
-              </button>
+              <Button variant="ghost" className="w-full justify-start" onClick={() => { setNewChildDialog(true); setShowNoteMenu(false); }}><Plus size={14} /> hija</Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={async () => { setShowNoteMenu(false); try { await navigator.clipboard.writeText(plainNoteText(note)); toast.success("Nota copiada"); } catch { toast.error("No se pudo copiar la nota"); } }}><Copy size={14} />Copiar nota</Button>
+              <Button variant="ghost" className="w-full justify-start" onClick={async () => { setShowNoteMenu(false); const copy = await duplicateNote(noteId); if (copy) goTo(copy.id); }}><Copy size={14} />Duplicar</Button>
               <button
                 onClick={() => { setShowMoveDialog(true); setShowNoteMenu(false); }}
                 className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
@@ -401,7 +395,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
                 onClick={() => { setShowLinkPicker(true); setShowNoteMenu(false); }}
                 className="w-full px-3 py-2.5 text-left text-sm hover:bg-muted flex items-center gap-2"
               >
-                <Link2 size={14} /> Enlazar con otra nota
+                <Link2 size={14} /> Enlazar nota
               </button>
               <button
                 onClick={() => { fileInputRef.current?.click(); setShowNoteMenu(false); }}
@@ -689,17 +683,18 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
       </div>
 
 
-      <NameInputDialog
-        open={newChildDialog !== null}
-        title={newChildDialog === "checklist" ? "Nueva lista hija" : "Nueva nota hija"}
-        placeholder={newChildDialog === "checklist" ? "Nombre de la lista..." : "Nombre de la nota..."}
-        onSubmit={async (name) => {
-          const type = newChildDialog!;
-          setNewChildDialog(null);
+      <CreateNodeDialog
+        open={newChildDialog}
+        notes={notes}
+        brainName={brainName}
+        defaultParentId={noteId}
+        childOnly
+        onCreateNote={async (_parentId, type, name) => {
+          setNewChildDialog(false);
           const created = await addNote(null, noteId, type);
           if (created) updateNote(created.id, { title: name });
         }}
-        onCancel={() => setNewChildDialog(null)}
+        onCancel={() => setNewChildDialog(false)}
       />
 
       <TaskSheet

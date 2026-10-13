@@ -1,5 +1,6 @@
 import { useNotes } from "@/contexts/NotesContext";
-import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { favoritePathIds } from "@/lib/noteActions";
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,6 +18,7 @@ import {
   Lock,
   LockOpen,
   Expand,
+  Heart,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
@@ -98,7 +100,7 @@ const TREE_BRANCH_PALETTE = [
 
 const svgSafeId = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 
-const GraphView = () => {
+const GraphView = ({ favoritesOnly = false, onToggleFavorites }: { favoritesOnly?: boolean; onToggleFavorites?: () => void }) => {
   const {
     notes,
     categories,
@@ -121,12 +123,8 @@ const GraphView = () => {
     loading,
   } = useNotes();
 
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 1200, h: 800 });
   const [openPostIt, setOpenPostIt] = useState<{ noteId: string; x: number; y: number } | null>(null);
@@ -926,7 +924,21 @@ const GraphView = () => {
     return ids;
   }, [focusNoteId, notes]);
 
-  const dimFor = useCallback((id: string) => (focusIds && !focusIds.has(id) ? 0.16 : 1), [focusIds]);
+  const favoriteIds = useMemo(() => favoritePathIds(notes), [notes]);
+  const favoriteGraphIds = useMemo(() => {
+    const ids = new Set(["root", "trunk-top"]);
+    for (const id of favoriteIds) {
+      ids.add(`note-${id}`);
+      const note = notes.find(note => note.id === id);
+      if (!note?.parentNoteId) ids.add(`attach-${id}`);
+    }
+    return ids;
+  }, [favoriteIds, notes]);
+  const dimFor = useCallback((id: string) => {
+    const note = notes.find(note => `note-${note.id}` === id);
+    if (favoritesOnly && note && !note.isFavorite) return 0.35;
+    return focusIds && !focusIds.has(id) ? 0.16 : 1;
+  }, [focusIds, favoritesOnly, notes]);
 
   const isolatedNodeIds = useMemo(() => {
     if (!isolatedRootId) return null;
@@ -941,14 +953,14 @@ const GraphView = () => {
 
   const visiblePositions = useMemo(
     () =>
-      isolatedNodeIds ? positionsWithOffsets.filter((node) => isolatedNodeIds.has(node.id)) : positionsWithOffsets,
-    [isolatedNodeIds, positionsWithOffsets],
+      positionsWithOffsets.filter(node => (!isolatedNodeIds || isolatedNodeIds.has(node.id) || (favoritesOnly && node.isVirtual) || (favoritesOnly && node.id === "root")) && (!favoritesOnly || favoriteGraphIds.has(node.id))),
+    [isolatedNodeIds, positionsWithOffsets, favoritesOnly, favoriteGraphIds],
   );
 
   const visibleEdges = useMemo(
     () =>
-      isolatedNodeIds ? edges.filter((edge) => isolatedNodeIds.has(edge.from) && isolatedNodeIds.has(edge.to)) : edges,
-    [isolatedNodeIds, edges],
+      edges.filter(edge => { const ids = new Set(visiblePositions.map(node => node.id)); return ids.has(edge.from) && ids.has(edge.to); }),
+    [visiblePositions, edges],
   );
 
   const visualForRoot = useCallback(
@@ -1324,11 +1336,18 @@ const GraphView = () => {
           })}
         </AnimatePresence>
       </div>
+      <Button data-no-pan variant="secondary" size="sm"
+        className="absolute bottom-[116px] md:bottom-[136px] left-3 z-30 shadow-float"
+        onClick={() => setPositionsLocked(value => !value)}
+        aria-label={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
+        aria-pressed={!positionsLocked}>
+        {positionsLocked ? <Lock size={16} /> : <LockOpen size={16} />} Editar árbol
+      </Button>
       {/* Minimapa + volver a vista general */}
       {minimapData && positionsWithOffsets.length > 0 && (
         <div
           data-no-pan
-          className="fixed bottom-3 left-3 z-30 w-[150px] h-[96px] md:w-[185px] md:h-[116px] rounded-xl border border-border/60 bg-card/80 backdrop-blur-md shadow-lg overflow-hidden"
+          className="absolute bottom-3 left-3 z-30 w-[150px] h-[96px] md:w-[185px] md:h-[116px] rounded-xl border border-border/60 bg-card/80 backdrop-blur-md shadow-lg overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <svg
@@ -1435,100 +1454,6 @@ const GraphView = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setPositionsLocked((v) => !v);
-          }}
-          className={`p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 transition-all flex items-center justify-center ${
-            positionsLocked ? "text-primary" : "text-muted-foreground"
-          }`}
-          title={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
-          aria-label={positionsLocked ? "Desbloquear posiciones" : "Bloquear posiciones"}
-        >
-          {positionsLocked ? <Lock size={16} /> : <LockOpen size={16} />}
-        </button>
-        <div className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowProfileMenu((v) => !v);
-              setShowFilterPanel(false);
-            }}
-            className="p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 text-muted-foreground transition-all flex items-center justify-center"
-            title={user ? "Perfil" : "Iniciar sesión"}
-          >
-            <UserIcon size={16} />
-          </button>
-          {showProfileMenu && (
-            <div
-              className="absolute right-0 top-12 surface-panel rounded-2xl py-1 min-w-[200px]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {user ? (
-                <>
-                  <div className="px-3 py-2 border-b border-border">
-                    <p className="text-xs md:text-[10px] font-body text-muted-foreground">Sesión</p>
-                    <p className="text-sm md:text-xs font-body text-foreground truncate">{user.email}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowBrainDialog(true);
-                      setShowProfileMenu(false);
-                    }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <Brain size={12} />
-                    Renombrar tu brain
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      setShowHistoryDialog(true);
-                    }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <History size={12} />
-                    Historial
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      setShowExportDialog(true);
-                    }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                  >
-                    <Download size={12} />
-                    Descargar mis notas
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setShowProfileMenu(false);
-                      await signOut();
-                      navigate("/auth");
-                    }}
-                    className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-destructive/10 flex items-center gap-2 font-body text-destructive"
-                  >
-                    <LogOut size={12} />
-                    Cerrar sesión
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    navigate("/auth");
-                  }}
-                  className="w-full text-left text-sm md:text-xs px-3 py-3 md:py-2 min-h-11 md:min-h-0 hover:bg-muted flex items-center gap-2 font-body text-foreground"
-                >
-                  <LogIn size={12} />
-                  Iniciar sesión
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
             setShowFilterPanel((v) => !v);
           }}
           className={`p-2.5 md:p-2 min-h-11 min-w-11 md:min-h-0 md:min-w-0 rounded-xl surface-glass hover:bg-muted/40 transition-all flex items-center justify-center ${
@@ -1539,6 +1464,7 @@ const GraphView = () => {
           {/* eye icon via emoji to avoid extra import */}
           <span className="text-sm leading-none">{hiddenCategoryIds.size > 0 ? "🙈" : "👁"}</span>
         </button>
+        <Button data-no-pan variant={favoritesOnly ? "secondary" : "outline"} size="icon" aria-label="Filtrar favoritas" title="Favoritas" aria-pressed={favoritesOnly} onClick={onToggleFavorites} className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"><Heart size={16} className={favoritesOnly ? "fill-current" : ""} /></Button>
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -1632,9 +1558,6 @@ const GraphView = () => {
         }}
       />
 
-      <HistoryDialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog} />
-
-      <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} />
 
       {/* Post-it overlay */}
       <AnimatePresence>

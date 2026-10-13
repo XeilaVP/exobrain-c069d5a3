@@ -1,13 +1,17 @@
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckSquare, ChevronDown, ChevronRight, Menu, Network, Search, StickyNote, X } from "lucide-react";
+import { CalendarDays, CheckSquare, ChevronDown, ChevronRight, Menu, Network, Search, StickyNote, Heart, X } from "lucide-react";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { Note } from "@/types/notes";
+import AccountMenu from "./AccountMenu";
+import { favoritePathIds } from "@/lib/noteActions";
 import { initialExpandedEntries } from "@/lib/taskNavigation";
 
 export type WorkspaceView = "tree" | "tasks" | "postits" | "planner";
 
 interface SideNavProps {
+  favoritesOnly: boolean;
+  onToggleFavorites: () => void;
   view: WorkspaceView;
   onView: (view: WorkspaceView) => void;
   onOpenNote: (noteId: string) => void;
@@ -22,17 +26,18 @@ const navItems = [
   { id: "planner" as const, label: "Planificador", icon: CalendarDays },
 ];
 
-const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavProps) => {
+const SideNav = ({ favoritesOnly, onToggleFavorites, view, onView, onOpenNote, mobile = false, onClose }: SideNavProps) => {
   const { notes, brainName } = useNotes();
   const [collapsed, setCollapsed] = useState(false);
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(initialExpandedEntries);
-  const roots = useMemo(() => notes.filter(n => !n.parentNoteId), [notes]);
+  const favoriteIds = useMemo(() => favoritePathIds(notes), [notes]);
+  const roots = useMemo(() => notes.filter(n => !n.parentNoteId && (!favoritesOnly || favoriteIds.has(n.id))), [notes, favoritesOnly, favoriteIds]);
   const results = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("es");
     if (!q) return [];
-    return notes.filter(n => `${n.title} ${n.content} ${n.checklist.map(i => i.text).join(" ")}`.toLocaleLowerCase("es").includes(q)).slice(0, 8);
-  }, [notes, query]);
+    return notes.filter(n => (!favoritesOnly || n.isFavorite) && `${n.title} ${n.content} ${n.checklist.map(i => i.text).join(" ")}`.toLocaleLowerCase("es").includes(q)).slice(0, 8);
+  }, [notes, query, favoritesOnly]);
 
   const toggle = (id: string) => setExpanded(prev => {
     const next = new Set(prev);
@@ -41,8 +46,8 @@ const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavP
   });
 
   const renderNode = (note: Note, depth = 0): React.ReactNode => {
-    const children = notes.filter(n => n.parentNoteId === note.id);
-    const isOpen = expanded.has(note.id);
+    const children = notes.filter(n => n.parentNoteId === note.id && (!favoritesOnly || favoriteIds.has(n.id)));
+    const isOpen = expanded.has(note.id) || (favoritesOnly && !note.isFavorite && children.length > 0);
     return (
       <div key={note.id}>
         <div className="flex items-center min-w-0" style={{ paddingLeft: depth * 12 }}>
@@ -51,7 +56,7 @@ const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavP
               {isOpen ? <ChevronDown /> : <ChevronRight />}
             </Button>
           ) : <span className="w-7 shrink-0" />}
-          <Button variant="ghost" className="h-8 min-w-0 flex-1 justify-start px-1.5 font-normal" onClick={() => onOpenNote(note.id)}>
+          <Button variant="ghost" className={`h-8 min-w-0 flex-1 justify-start px-1.5 font-normal ${favoritesOnly && !note.isFavorite ? "opacity-50" : ""}`} onClick={() => onOpenNote(note.id)}>
             <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: note.color ? `hsl(${note.color})` : "hsl(var(--muted-foreground))" }} />
             <span className="truncate">{note.icon || ""} {note.title}</span>
           </Button>
@@ -77,6 +82,7 @@ const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavP
             <item.icon /> {(mobile || !collapsed) && item.label}
           </Button>
         ))}
+        <Button variant={favoritesOnly ? "secondary" : "ghost"} className={`w-full ${!mobile && collapsed ? "px-0" : "justify-start"}`} aria-label="Filtrar favoritas" aria-pressed={favoritesOnly} onClick={onToggleFavorites} title="Favoritas"><Heart className={favoritesOnly ? "fill-current" : ""} />{(mobile || !collapsed) && "Favoritas"}</Button>
       </nav>
       {(mobile || !collapsed) && (
         <>
@@ -94,6 +100,7 @@ const SideNav = ({ view, onView, onOpenNote, mobile = false, onClose }: SideNavP
           <div className="flex-1 overflow-y-auto px-2 pb-3 scrollbar-thin">{roots.map(note => renderNode(note))}</div>
         </>
       )}
+      <div className="mt-auto shrink-0 border-t border-sidebar-border p-2"><AccountMenu collapsed={!mobile && collapsed} /></div>
     </aside>
   );
 };
