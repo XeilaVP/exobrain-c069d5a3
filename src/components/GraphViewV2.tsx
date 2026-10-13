@@ -5,16 +5,11 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
-  User as UserIcon,
-  LogOut,
-  LogIn,
   Brain,
   TreePine,
   Save,
   Sun,
   Moon,
-  History,
-  Download,
   Lock,
   LockOpen,
   Expand,
@@ -24,11 +19,8 @@ import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
 import BrainNameDialog from "./BrainNameDialog";
 import CreateNodeDialog from "./CreateNodeDialog";
-import HistoryDialog from "./HistoryDialog";
-import ExportDialog from "./ExportDialog";
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 import { Note } from "@/types/notes";
-import { useNavigate } from "react-router-dom";
 import { motifPath, pickMotif, type BranchMotif } from "@/lib/treeGeometry";
 
 /** Grosor de rama según profundidad. */
@@ -123,7 +115,6 @@ const GraphView = ({ favoritesOnly = false, onToggleFavorites }: { favoritesOnly
     loading,
   } = useNotes();
 
-  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 1200, h: 800 });

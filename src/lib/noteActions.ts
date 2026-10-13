@@ -15,7 +15,7 @@ export function favoritePathIds(notes: Note[]): Set<string> {
   return ids;
 }
 
-export function duplicateNoteData(note: Note, newId = () => crypto.randomUUID()) {
+export function duplicateNoteData(note: Note, newId: () => string = () => crypto.randomUUID()) {
   const ids = new Map(note.checklist.map(item => [item.id, newId()]));
   return {
     title: `${note.title} (copia)`, content: note.content,
