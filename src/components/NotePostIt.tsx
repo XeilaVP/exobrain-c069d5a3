@@ -734,7 +734,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
         }}
         onToggleSubtask={(id) => {
           updateNote(noteId, {
-            checklist: note.checklist.map(i => i.id === id ? { ...i, completed: !i.completed } : i),
+            checklist: toggleAndSort(note.checklist, id),
           });
         }}
         onDeleteSubtask={(id) => {
