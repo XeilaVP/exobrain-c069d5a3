@@ -1,3 +1,4 @@
+import { toggleAndSort } from "@/lib/checklistOrder";
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { Note, Category, ChecklistItem, NoteType } from "@/types/notes";
 import { supabase } from "@/integrations/supabase/client";
