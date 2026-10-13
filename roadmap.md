@@ -21,3 +21,6 @@
 - [x] Editar items por clic sin interferir con arrastre, completado ni borrado
 - [x] Derivar Calendario de fechas individuales y simplificar pertenencia a vistas
 - [x] Verificar edición, calendario automático y persistencia
+- [ ] Descripción sin recuadro y selectores visibles en una fila con prioridad coloreada
+- [ ] Traslado transaccional de subtareas con sus items y navegación actualizada
+- [ ] Verificar traslado, conservación de datos y presentación en móvil/escritorio
