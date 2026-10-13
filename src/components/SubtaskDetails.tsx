@@ -12,9 +12,10 @@ interface SubtaskDetailsProps {
   onNavigate: (id: string) => void;
   onBack?: () => void;
   onClose: () => void;
+  onMoved?: (noteId: string) => void;
 }
 
-const SubtaskDetails = ({ noteId, subtaskId, onNavigate, onBack, onClose }: SubtaskDetailsProps) => {
+const SubtaskDetails = ({ noteId, subtaskId, onNavigate, onBack, onClose, onMoved }: SubtaskDetailsProps) => {
   const { notes, updateNote, getLinkedNotes } = useNotes();
   const note = notes.find(n => n.id === noteId);
   const task = note?.checklist.find(i => i.id === subtaskId);
@@ -25,6 +26,7 @@ const SubtaskDetails = ({ noteId, subtaskId, onNavigate, onBack, onClose }: Subt
 
   return <TaskSheet
     open noteId={noteId} task={task} allItems={note.checklist} onClose={onClose}
+    onMoved={onMoved}
     checklistItems
     navigation={<nav aria-label="Migas de pan" className="flex flex-wrap items-center gap-1 px-4 py-2 border-b border-border">
       {onBack && <Button variant="ghost" size="icon" aria-label="Atrás" onClick={onBack}><ArrowLeft /></Button>}

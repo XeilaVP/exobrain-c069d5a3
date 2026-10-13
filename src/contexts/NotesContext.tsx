@@ -54,6 +54,7 @@ interface NotesContextType {
   setSelectedNoteId: (id: string | null) => void;
   addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null, pos?: { x: number; y: number } | null) => Promise<Note | null>;
   moveNote: (noteId: string, newParentId: string | null) => Promise<boolean>;
+  moveSubtask: (sourceId: string, targetId: string, itemId: string) => Promise<boolean>;
   getDescendantIds: (noteId: string) => Set<string>;
   canMoveTo: (noteId: string, targetId: string | null) => boolean;
   getRootNotes: () => Note[];
@@ -197,6 +198,34 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Debounced save for note updates
   const updateTimers = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pendingUpdates = React.useRef<Record<string, Partial<Note>>>({});
+  const saves = React.useRef<Record<string, Promise<void>>>({});
+  const movingNotes = React.useRef(new Set<string>());
+  const notesRef = React.useRef(notes);
+  notesRef.current = notes;
+  const flushNote = useCallback(async (id: string) => {
+    clearTimeout(updateTimers.current[id]);
+    const updates = pendingUpdates.current[id];
+    delete pendingUpdates.current[id];
+    const previous = saves.current[id] ?? Promise.resolve();
+    const next = previous.then(async () => {
+      if (!updates) return;
+      const dbUpdates: any = { updated_at: new Date().toISOString() };
+      if (updates.title !== undefined) dbUpdates.title = updates.title;
+      if (updates.content !== undefined) dbUpdates.content = updates.content;
+      if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
+      if (updates.parentNoteId !== undefined) dbUpdates.parent_note_id = updates.parentNoteId;
+      if (updates.checklist !== undefined) dbUpdates.checklist = updates.checklist;
+      if (updates.linkedNoteIds !== undefined) dbUpdates.linked_note_ids = updates.linkedNoteIds;
+      if (updates.icon !== undefined) dbUpdates.icon = updates.icon;
+      if (updates.color !== undefined) dbUpdates.color = updates.color;
+      if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
+      const { error } = await supabase.from("notes").update(dbUpdates).eq("id", id);
+      if (error) { pendingUpdates.current[id] = { ...updates, ...pendingUpdates.current[id] }; throw error; }
+    });
+    saves.current[id] = next;
+    try { await next; } finally { if (saves.current[id] === next) delete saves.current[id]; }
+  }, []);
 
   const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null, pos?: { x: number; y: number } | null) => {
     if (!user) return null;
@@ -231,24 +260,43 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user, notes]);
 
   const updateNote = useCallback((id: string, updates: Partial<Note>) => {
+    if (movingNotes.current.has(id)) return;
     // Optimistic update locally
     setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n));
     // Debounce DB save
     clearTimeout(updateTimers.current[id]);
-    updateTimers.current[id] = setTimeout(async () => {
-      const dbUpdates: any = { updated_at: new Date().toISOString() };
-      if (updates.title !== undefined) dbUpdates.title = updates.title;
-      if (updates.content !== undefined) dbUpdates.content = updates.content;
-      if (updates.categoryId !== undefined) dbUpdates.category_id = updates.categoryId;
-      if (updates.parentNoteId !== undefined) dbUpdates.parent_note_id = updates.parentNoteId;
-      if (updates.checklist !== undefined) dbUpdates.checklist = updates.checklist;
-      if (updates.linkedNoteIds !== undefined) dbUpdates.linked_note_ids = updates.linkedNoteIds;
-      if ((updates as any).icon !== undefined) dbUpdates.icon = (updates as any).icon;
-      if (updates.color !== undefined) dbUpdates.color = updates.color;
-      if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
-      await supabase.from("notes").update(dbUpdates).eq("id", id);
+    pendingUpdates.current[id] = { ...pendingUpdates.current[id], ...updates };
+    updateTimers.current[id] = setTimeout(() => {
+      void flushNote(id).catch(() => toast.error("No se pudo guardar la nota"));
     }, 500);
-  }, []);
+  }, [flushNote]);
+
+  const moveSubtask = useCallback(async (sourceId: string, targetId: string, itemId: string) => {
+    if (movingNotes.current.has(sourceId) || movingNotes.current.has(targetId)) return false;
+    movingNotes.current.add(sourceId);
+    movingNotes.current.add(targetId);
+    try {
+      await Promise.all([flushNote(sourceId), flushNote(targetId)]);
+      const source = notesRef.current.find(n => n.id === sourceId);
+      const target = notesRef.current.find(n => n.id === targetId);
+      if (!source || !target) throw new Error("Missing note");
+      const { data, error } = await supabase.rpc("move_checklist_subtask", {
+        _source_id: sourceId, _target_id: targetId, _item_id: itemId,
+        _source_checklist: source.checklist as any, _target_checklist: target.checklist as any,
+      });
+      if (error) throw error;
+      const updated = (data ?? []).map(dbToNote);
+      setNotes(prev => prev.map(n => updated.find(row => row.id === n.id) ?? n));
+      toast.success("Subtarea movida");
+      return true;
+    } catch {
+      toast.error("No se pudo mover la subtarea. Los datos se han conservado; vuelve a intentarlo.");
+      return false;
+    } finally {
+      movingNotes.current.delete(sourceId);
+      movingNotes.current.delete(targetId);
+    }
+  }, [flushNote]);
 
   const setViewMembership = useCallback(async (id: string, patch: ViewMembershipPatch) => {
     setNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch } : n));
@@ -339,19 +387,16 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Debounce checklist writes per note to coalesce rapid mutations (add + delete) and
   // avoid race conditions where an older PATCH overwrites a newer one on the server.
-  const checklistTimers = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const persistChecklist = useCallback((noteId: string, newChecklist: ChecklistItem[]) => {
     clearTimeout(updateTimers.current[noteId]);
-    clearTimeout(checklistTimers.current[noteId]);
-    checklistTimers.current[noteId] = setTimeout(() => {
-      supabase.from("notes")
-        .update({ checklist: newChecklist as any, updated_at: new Date().toISOString() })
-        .eq("id", noteId)
-        .then(({ error }) => { if (error) toast.error("No se pudo guardar la lista"); });
+    pendingUpdates.current[noteId] = { ...pendingUpdates.current[noteId], checklist: newChecklist };
+    updateTimers.current[noteId] = setTimeout(() => {
+      void flushNote(noteId).catch(() => toast.error("No se pudo guardar la lista"));
     }, 250);
-  }, []);
+  }, [flushNote]);
 
   const addChecklistItem = useCallback((noteId: string, text: string) => {
+    if (movingNotes.current.has(noteId)) return;
     setNotes(prev => {
       const target = prev.find(n => n.id === noteId);
       if (!target) return prev;
@@ -362,6 +407,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [persistChecklist]);
 
   const toggleChecklistItem = useCallback((noteId: string, itemId: string) => {
+    if (movingNotes.current.has(noteId)) return;
     setNotes(prev => {
       const target = prev.find(n => n.id === noteId);
       if (!target) return prev;
@@ -372,6 +418,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [persistChecklist]);
 
   const deleteChecklistItem = useCallback((noteId: string, itemId: string) => {
+    if (movingNotes.current.has(noteId)) return;
     setNotes(prev => {
       const target = prev.find(n => n.id === noteId);
       if (!target) return prev;
@@ -655,7 +702,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setViewMembership,
       notes, categories, selectedCategoryId, selectedNoteId, activeView, loading,
       setActiveView, setSelectedCategoryId, setSelectedNoteId,
-      addNote, moveNote, getDescendantIds, canMoveTo, getRootNotes, updateNote, deleteNote, addCategory, updateCategory, deleteCategory,
+      addNote, moveNote, moveSubtask, getDescendantIds, canMoveTo, getRootNotes, updateNote, deleteNote, addCategory, updateCategory, deleteCategory,
       addChecklistItem, toggleChecklistItem, deleteChecklistItem,
       toggleNoteCollapsed, toggleCategoryCollapsed,
       linkNotes, unlinkNotes,
