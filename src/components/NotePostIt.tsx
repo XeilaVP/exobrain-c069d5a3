@@ -1,3 +1,4 @@
+import { toggleAndSort } from "@/lib/checklistOrder";
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Flag } from "lucide-react";
@@ -734,7 +735,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
         }}
         onToggleSubtask={(id) => {
           updateNote(noteId, {
-            checklist: note.checklist.map(i => i.id === id ? { ...i, completed: !i.completed } : i),
+            checklist: toggleAndSort(note.checklist, id),
           });
         }}
         onDeleteSubtask={(id) => {

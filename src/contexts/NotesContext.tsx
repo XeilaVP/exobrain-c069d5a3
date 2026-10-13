@@ -1,3 +1,4 @@
+import { toggleAndSort } from "@/lib/checklistOrder";
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { Note, Category, ChecklistItem, NoteType } from "@/types/notes";
 import { supabase } from "@/integrations/supabase/client";
@@ -362,7 +363,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotes(prev => {
       const target = prev.find(n => n.id === noteId);
       if (!target) return prev;
-      const newChecklist = target.checklist.map(i => i.id === itemId ? { ...i, completed: !i.completed } : i);
+      const newChecklist = toggleAndSort(target.checklist, itemId);
       persistChecklist(noteId, newChecklist);
       return prev.map(n => n.id === noteId ? { ...n, checklist: newChecklist, updatedAt: new Date().toISOString() } : n);
     });
