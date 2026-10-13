@@ -4,10 +4,10 @@ import { X, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, Do
 import { toast } from "sonner";
 
 import { ChecklistItem } from "@/types/notes";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { DateControl, PriorityControl } from "./TaskMetaControls";
 import EditableChecklistText from "./EditableChecklistText";
+import TaskDescription from "./TaskDescription";
+import SubtaskParentControl from "./SubtaskParentControl";
 
 const SubtaskRow = ({ item, onToggle, onDelete, onEdit }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void; onEdit: (text: string) => void }) => {
   const controls = useDragControls();
@@ -57,22 +57,21 @@ interface TaskSheetProps {
   navigation?: ReactNode;
   relatedNotes?: ReactNode;
   checklistItems?: boolean;
+  onMoved?: (noteId: string) => void;
 }
 
 const TaskSheet = ({
   open, noteId, task, allItems, onChange, onDelete,
   onAddSubtask, onToggleSubtask, onDeleteSubtask, onEditSubtask, onMoveSubtask, onReorderSubtasks, onClose,
-  navigation, relatedNotes, checklistItems = false,
+  navigation, relatedNotes, checklistItems = false, onMoved,
 }: TaskSheetProps) => {
   const [title, setTitle] = useState("");
-  const [notes, setNotes] = useState("");
   const [newSub, setNewSub] = useState("");
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (task) {
       setTitle(task.text);
-      setNotes(task.notes ?? "");
     }
   }, [task?.id]);
 
@@ -84,11 +83,6 @@ const TaskSheet = ({
     const t = title.trim();
     if (t && t !== task.text) onChange({ text: t });
   };
-  const commitNotes = () => {
-    if ((notes ?? "") !== (task.notes ?? "")) onChange({ notes });
-  };
-
-  const dueDate = task.dueAt ? new Date(task.dueAt) : null;
   const addSub = () => {
     const t = newSub.trim();
     if (!t) return;
@@ -159,6 +153,7 @@ const TaskSheet = ({
             </div>
 
             <div className="overflow-y-auto scrollbar-thin px-4 py-3 space-y-4 flex-1">
+              {onMoved && <SubtaskParentControl noteId={noteId} subtaskId={task.id} onMoved={onMoved} />}
               {/* Title */}
               <textarea
                 ref={titleRef}
@@ -171,31 +166,15 @@ const TaskSheet = ({
               />
 
               {/* Notes */}
-              <div>
-                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Notas</label>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  onBlur={commitNotes}
-                  placeholder="Añade detalles..."
-                  rows={3}
-                  className="w-full mt-1 bg-muted rounded-md text-sm px-3 py-2 outline-none text-foreground placeholder:text-muted-foreground font-body resize-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
+              <TaskDescription value={task.notes ?? ""} onSave={notes => onChange({ notes })} />
 
               {/* Date + time (task style only) */}
               {task.style !== "bullet" && !task.parentId && (
               <div>
-                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Fecha</label>
                 <div className="flex min-w-0 flex-wrap items-center gap-2 mt-1">
                   <DateControl dueAt={task.dueAt} hasTime={task.hasTime} onDateChange={(dueAt, hasTime) => onChange({ dueAt, hasTime })} />
                   <PriorityControl priority={task.priority} onChange={priority => onChange({ priority: priority ?? undefined })} />
                 </div>
-                {dueDate && (
-                  <p className="text-xs text-muted-foreground font-body mt-1.5">
-                    {format(dueDate, task.hasTime ? "EEEE d 'de' MMMM, HH:mm" : "EEEE d 'de' MMMM", { locale: es })}
-                  </p>
-                )}
               </div>
               )}
 

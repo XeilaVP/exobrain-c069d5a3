@@ -43,6 +43,10 @@ const NoteOverlay = ({ noteId, subtaskId, onClose }: NoteOverlayProps) => {
         onClose={onClose}
         onNavigate={navigate}
         onBack={history.length ? back : undefined}
+        onMoved={id => {
+          setCurrent({ noteId: id, subtaskId: current.subtaskId });
+          setHistory(prev => prev.map(entry => entry.subtaskId === current.subtaskId ? { ...entry, noteId: id } : entry));
+        }}
       /> : <NotePostIt
         key={current.noteId}
         noteId={current.noteId}

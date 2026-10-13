@@ -14,6 +14,8 @@ import MoveToDialog from "./MoveToDialog";
 import ColorPicker from "./ColorPicker";
 import ViewMembershipBar from "./ViewMembershipBar";
 import EditableChecklistText from "./EditableChecklistText";
+import TaskDescription from "./TaskDescription";
+import SubtaskDetails from "./SubtaskDetails";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 import { format, isToday, isTomorrow, isPast } from "date-fns";
@@ -239,6 +241,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
   const { attachments, uploading, uploadFile, deleteAttachment } = useNoteAttachments(noteId);
   const [newChildDialog, setNewChildDialog] = useState<null | "text" | "checklist">(null);
   const [sheetTaskId, setSheetTaskId] = useState<string | null>(null);
+  const [movedDestination, setMovedDestination] = useState<{ noteId: string; subtaskId: string } | null>(null);
 
   useEffect(() => { setSelectedNoteId(noteId); }, [noteId, setSelectedNoteId]);
 
@@ -501,6 +504,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
       >
         {isChecklistNote ? (
           <div>
+            <TaskDescription value={note.content} onSave={content => updateNote(noteId, { content })} />
             <h3 className="font-display text-base md:text-sm font-semibold text-foreground flex items-center gap-1.5 mb-2">
               <CheckSquare size={16} className="text-primary" />Tareas
               {note.checklist.length > 0 && (
@@ -704,6 +708,11 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
         task={sheetTaskId ? note.checklist.find(i => i.id === sheetTaskId) ?? null : null}
         allItems={note.checklist}
         onClose={() => setSheetTaskId(null)}
+        onMoved={id => {
+          if (!sheetTaskId) return;
+          setMovedDestination({ noteId: id, subtaskId: sheetTaskId });
+          setSheetTaskId(null);
+        }}
         onChange={(patch) => {
           if (!sheetTaskId) return;
           updateNote(noteId, {
@@ -765,6 +774,10 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
           updateNote(noteId, { checklist: rebuilt });
         }}
       />
+      {movedDestination && <SubtaskDetails noteId={movedDestination.noteId} subtaskId={movedDestination.subtaskId}
+        onMoved={id => setMovedDestination(previous => previous ? { ...previous, noteId: id } : null)}
+        onClose={() => setMovedDestination(null)} onBack={() => setMovedDestination(null)}
+        onNavigate={id => { setMovedDestination(null); goTo(id); }} />}
       
     </motion.div>
       <MoveToDialog
