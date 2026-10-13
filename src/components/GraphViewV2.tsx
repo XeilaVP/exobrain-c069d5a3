@@ -923,8 +923,11 @@ const GraphView = ({ favoritesOnly = false, onToggleFavorites }: { favoritesOnly
       const note = notes.find(note => note.id === id);
       if (!note?.parentNoteId) ids.add(`attach-${id}`);
     }
+    // The trunk is a chain through every attachment, including non-favorite roots.
+    // Retain virtual connectors without exposing their non-favorite notes.
+    positionsWithOffsets.filter(node => node.isVirtual).forEach(node => ids.add(node.id));
     return ids;
-  }, [favoriteIds, notes]);
+  }, [favoriteIds, notes, positionsWithOffsets]);
   const dimFor = useCallback((id: string) => {
     const note = notes.find(note => `note-${note.id}` === id);
     if (favoritesOnly && note && !note.isFavorite) return 0.35;

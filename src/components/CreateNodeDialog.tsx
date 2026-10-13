@@ -83,10 +83,14 @@ const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, childOnly =
 
         <div className="flex gap-2">
           <Button
+            variant={noteType === "text" ? "default" : "outline"}
+            aria-pressed={noteType === "text"}
             onClick={() => setNoteType("text")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs border ${noteType === "text" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
           ><FileText size={14} />Texto</Button>
           <Button
+            variant={noteType === "checklist" ? "default" : "outline"}
+            aria-pressed={noteType === "checklist"}
             onClick={() => setNoteType("checklist")}
             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs border ${noteType === "checklist" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-muted"}`}
           ><ListChecks size={14} />Tasks</Button>
@@ -114,7 +118,7 @@ const CreateNodeDialog = ({ open, notes, brainName, defaultParentId, childOnly =
         )}
 
         <div className="flex gap-2 justify-end">
-          <Button onClick={onCancel} className="px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs text-muted-foreground hover:bg-muted">Cancelar</Button>
+          <Button variant="ghost" onClick={onCancel} className="px-3 py-2 min-h-11 md:min-h-0 rounded-md text-xs text-muted-foreground hover:bg-muted">Cancelar</Button>
           <Button onClick={submit} disabled={!name.trim()} className="px-4 py-2 min-h-11 md:min-h-0 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 disabled:opacity-40">Crear</Button>
         </div>
       </motion.div>

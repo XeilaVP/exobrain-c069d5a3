@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, CheckSquare, ChevronDown, ChevronRight, Menu, Network, Search, StickyNote, Heart, X } from "lucide-react";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,9 @@ const SideNav = ({ favoritesOnly, onToggleFavorites, view, onView, onOpenNote, m
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(initialExpandedEntries);
   const favoriteIds = useMemo(() => favoritePathIds(notes), [notes]);
+  useEffect(() => {
+    if (favoritesOnly) setExpanded(new Set(favoriteIds));
+  }, [favoritesOnly, favoriteIds]);
   const roots = useMemo(() => notes.filter(n => !n.parentNoteId && (!favoritesOnly || favoriteIds.has(n.id))), [notes, favoritesOnly, favoriteIds]);
   const results = useMemo(() => {
     const q = query.trim().toLocaleLowerCase("es");
@@ -47,7 +50,7 @@ const SideNav = ({ favoritesOnly, onToggleFavorites, view, onView, onOpenNote, m
 
   const renderNode = (note: Note, depth = 0): React.ReactNode => {
     const children = notes.filter(n => n.parentNoteId === note.id && (!favoritesOnly || favoriteIds.has(n.id)));
-    const isOpen = expanded.has(note.id) || (favoritesOnly && !note.isFavorite && children.length > 0);
+    const isOpen = expanded.has(note.id);
     return (
       <div key={note.id}>
         <div className="flex items-center min-w-0" style={{ paddingLeft: depth * 12 }}>

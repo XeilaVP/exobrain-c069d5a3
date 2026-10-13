@@ -19,7 +19,7 @@ export default function AccountMenu({ collapsed = false }: { collapsed?: boolean
   return <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild><Button variant="ghost" className={`w-full ${collapsed ? "px-0" : "justify-start"}`} aria-label="Usuario"><User />{!collapsed && <span className="truncate">{user?.email || "Iniciar sesión"}</span>}</Button></PopoverTrigger>
-      <PopoverContent side="top" align="start" className="w-64 p-1">
+      <PopoverContent side="top" align="start" className="z-[70] w-64 p-1">
         {user ? <>
           <p className="truncate border-b border-border px-3 py-2 text-sm text-muted-foreground">{user.email}</p>
           <Button variant="ghost" className="w-full justify-start" onClick={() => choose("brain")}><Brain />Renombrar tu brain</Button>
