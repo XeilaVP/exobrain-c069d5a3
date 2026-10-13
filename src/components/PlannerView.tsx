@@ -17,7 +17,7 @@ const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
   const [selected, setSelected] = useState<CalendarTask | null>(null);
   const tasks = useMemo(() => notes.filter(n => n.inCalendar).flatMap(note => [
     ...(note.calendarAt ? [{ note, item: { id: NOTE_ENTRY, text: note.title, completed: false, dueAt: note.calendarAt, hasTime: note.calendarHasTime } as ChecklistItem }] : []),
-    ...note.checklist.filter(i => i.dueAt && i.style !== "bullet").map(item => ({ note, item })),
+    ...note.checklist.filter(i => i.dueAt && !i.parentId && i.style !== "bullet").map(item => ({ note, item })),
   ]), [notes]);
   const range = mode === "month"
     ? { start: startOfWeek(startOfMonth(cursor), { weekStartsOn: 1 }), end: endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 }) }
