@@ -8,6 +8,13 @@
       "when": 1791909748964,
       "tag": "0000_notes_priority",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791915733016,
+      "tag": "0001_move_checklist_subtask",
+      "breakpoints": true
     }
   ]
 }

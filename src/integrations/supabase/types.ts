@@ -416,6 +416,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      move_checklist_subtask: {
+        Args: {
+          _item_id: string
+          _source_checklist: Json
+          _source_id: string
+          _target_checklist: Json
+          _target_id: string
+        }
+        Returns: {
+          calendar_at: string | null
+          calendar_has_time: boolean
+          category_id: string | null
+          checklist: Json
+          color: string | null
+          content: string
+          created_at: string
+          icon: string | null
+          id: string
+          in_calendar: boolean
+          in_postits: boolean
+          in_tasks: boolean
+          is_collapsed: boolean
+          linked_note_ids: string[]
+          note_type: string
+          parent_note_id: string | null
+          pos_dx: number | null
+          pos_dy: number | null
+          pos_x: number | null
+          pos_y: number | null
+          priority: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "notes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       move_note: {
         Args: { _new_parent_id?: string; _note_id: string }
         Returns: {
