@@ -28,7 +28,6 @@ import NameInputDialog from "./NameInputDialog";
 import CreateNodeDialog from "./CreateNodeDialog";
 import ColorPicker from "./ColorPicker";
 import EmojiPicker from "./EmojiPicker";
-import GoogleCalendarMenuItem from "./GoogleCalendarMenuItem";
 import HistoryDialog from "./HistoryDialog";
 import ExportDialog from "./ExportDialog";
 import MoveToDialog from "./MoveToDialog";
@@ -1377,7 +1376,6 @@ const GraphView = () => {
                     <Brain size={12} />
                     Renombrar tu brain
                   </button>
-                  <GoogleCalendarMenuItem onClose={() => setShowProfileMenu(false)} />
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);

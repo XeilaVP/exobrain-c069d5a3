@@ -11,7 +11,7 @@ const toLocalInput = (iso: string | null | undefined, withTime: boolean) => {
 
 /** Manual, per-note membership in Tasks, Post-its and Calendario. Never touches note content. */
 const ViewMembershipBar = ({ note }: { note: Note }) => {
-  const { setViewMembership, updateNote } = useNotes();
+  const { setViewMembership } = useNotes();
   const [picking, setPicking] = useState(false);
   const [withTime, setWithTime] = useState(!!note.calendarHasTime);
   const [value, setValue] = useState(toLocalInput(note.calendarAt, !!note.calendarHasTime) || format(new Date(), "yyyy-MM-dd"));
@@ -49,11 +49,6 @@ const ViewMembershipBar = ({ note }: { note: Note }) => {
           <button className={chip(false)} onClick={() => setPicking(p => !p)}>
             <CalendarDays size={14} /> Añadir a calendario
           </button>
-        )}
-        {note.noteType === "checklist" && (
-          <select value={note.priority ?? ""} onChange={e => updateNote(note.id, { priority: (e.target.value || null) as Note["priority"] })} className="h-9 rounded-full border border-border bg-background px-3 text-xs text-foreground">
-            <option value="">Sin prioridad</option><option value="high">Prioridad alta</option><option value="medium">Prioridad media</option><option value="low">Prioridad baja</option>
-          </select>
         )}
       </div>
       {picking && (

@@ -22,7 +22,6 @@ import { useTheme } from "@/hooks/useTheme";
 import NotePostIt from "./NotePostIt";
 import BrainNameDialog from "./BrainNameDialog";
 import CreateNodeDialog from "./CreateNodeDialog";
-import GoogleCalendarMenuItem from "./GoogleCalendarMenuItem";
 import HistoryDialog from "./HistoryDialog";
 import ExportDialog from "./ExportDialog";
 import { CATEGORY_COLORS, DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
@@ -1479,7 +1478,6 @@ const GraphView = () => {
                     <Brain size={12} />
                     Renombrar tu brain
                   </button>
-                  <GoogleCalendarMenuItem onClose={() => setShowProfileMenu(false)} />
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
