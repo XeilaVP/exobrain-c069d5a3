@@ -28,6 +28,9 @@
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 55%;
+    --priority-high: 0 72% 46%;
+    --priority-medium: 36 90% 36%;
+    --priority-low: 145 62% 32%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 225 24% 92%;
@@ -87,6 +90,9 @@
     --accent-foreground: 232 20% 10%;
 
     --destructive: 0 65% 58%;
+    --priority-high: 0 85% 72%;
+    --priority-medium: 40 90% 66%;
+    --priority-low: 145 60% 65%;
     --destructive-foreground: 225 25% 95%;
 
     --border: 232 12% 24%;
@@ -139,6 +145,9 @@
 }
 
 @layer utilities {
+  .priority-high { color: hsl(var(--priority-high)); }
+  .priority-medium { color: hsl(var(--priority-medium)); }
+  .priority-low { color: hsl(var(--priority-low)); }
   .canvas-wash {
     background-image: var(--canvas-wash);
   }

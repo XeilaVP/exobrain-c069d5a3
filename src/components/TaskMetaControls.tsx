@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays, Flag } from "lucide-react";
+import { CalendarDays, ChevronDown, Flag } from "lucide-react";
 import type { ChecklistItem } from "@/types/notes";
 import { dateInputToISO } from "@/lib/taskMetadata";
 import { Button } from "@/components/ui/button";
@@ -37,16 +37,17 @@ const localValue = (iso?: string | null, hasTime?: boolean) => {
 export const PriorityControl = ({ priority, onChange }: { priority?: Priority | null; onChange: (priority: Priority | null) => void }) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="ghost" size="sm" aria-label={`Prioridad: ${priority ? priorityLabel[priority] : "sin prioridad"}`} className="h-7 justify-start gap-1 px-1.5 text-xs font-normal text-muted-foreground">
-        <Flag className="h-3.5 w-3.5" />
+      <Button variant="outline" size="sm" aria-label={`Prioridad: ${priority ? priorityLabel[priority] : "sin prioridad"}`} className="h-9 shrink-0 justify-start gap-2 px-2.5 text-xs font-normal text-foreground">
+        <Flag className={`h-4 w-4 ${priority ? `priority-${priority}` : "text-muted-foreground"}`} />
         {priority ? priorityLabel[priority] : "Prioridad"}
+        <ChevronDown className="h-3 w-3 text-muted-foreground" />
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="start" className="z-[80]">
       <DropdownMenuItem onSelect={() => onChange(null)}>Sin prioridad</DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onChange("high")}><Flag className="mr-2 h-4 w-4" />Alta</DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onChange("medium")}><Flag className="mr-2 h-4 w-4" />Media</DropdownMenuItem>
-      <DropdownMenuItem onSelect={() => onChange("low")}><Flag className="mr-2 h-4 w-4" />Baja</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => onChange("high")}><Flag className="priority-high mr-2 h-4 w-4" />Alta</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => onChange("medium")}><Flag className="priority-medium mr-2 h-4 w-4" />Media</DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => onChange("low")}><Flag className="priority-low mr-2 h-4 w-4" />Baja</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 );
@@ -63,7 +64,7 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
 
   const dateLabel = dueAt
     ? format(new Date(dueAt), hasTime ? "d MMM · HH:mm" : "d MMM", { locale: es })
-    : "Añadir fecha";
+    : "Añadir fecha/hora";
 
   return (
       <Popover open={open} onOpenChange={(nextOpen) => {
@@ -71,9 +72,10 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
         setOpen(nextOpen);
       }}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-7 max-w-full justify-start gap-1 px-1.5 text-xs font-normal text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5" />
+          <Button variant="outline" size="sm" className="h-9 max-w-full shrink-0 justify-start gap-2 px-2.5 text-xs font-normal text-foreground">
+            <CalendarDays className="h-4 w-4" />
             <span className="whitespace-nowrap">{dateLabel}</span>
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="z-[80] w-72 space-y-3 p-3">
@@ -103,7 +105,7 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
 };
 
 const TaskMetaControls = ({ priority, onPriorityChange, ...dateProps }: TaskMetaControlsProps) => (
-  <div className="flex min-w-0 flex-col items-start gap-1">
+  <div className="flex min-w-0 flex-wrap items-center gap-2">
     <DateControl {...dateProps} />
     <PriorityControl priority={priority} onChange={onPriorityChange} />
   </div>
