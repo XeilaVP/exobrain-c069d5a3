@@ -22,13 +22,22 @@ Arriba aparece una sección **Prioritarias** que muestra solo lo que tiene fecha
 - Orden: prioridad alta primero, después por fecha más próxima.
 Debajo se mantienen los bloques actuales de las notas añadidas a Tasks.
 
-## Datos existentes
-- Los items que hoy tengan prioridad o fecha y estén dentro de una subtarea conservan el dato guardado pero dejan de mostrarse/usarse.
-- Items anidados en un tercer nivel se suben a items de su subtarea (sin perder texto ni estado).
+## Datos existentes: tú decides
+Nada se cambia automáticamente. Al abrir una nota de lista con casos que no encajan, aparece un aviso "Revisar estructura" con la lista de items afectados y una decisión por cada uno (o "aplicar a todos"):
+- **Item con fecha o prioridad** (dentro de una subtarea):
+  - Convertirlo en subtarea (sube de nivel y conserva fecha/prioridad).
+  - Quitarle fecha y prioridad (se queda como item).
+  - Dejarlo como está por ahora (el dato se guarda pero no sale en Tasks ni calendario).
+- **Item de 3.er nivel o más:**
+  - Subirlo a item de su subtarea.
+  - Convertirlo en subtarea propia.
+  - Dejarlo como está por ahora.
+- El aviso se puede cerrar y volver a abrir desde la nota mientras queden casos pendientes. Cada decisión es reversible desde el historial de la nota.
 
 ## Detalles técnicos
 - Migración: `notes.priority text null` (check high|medium|low), sin tocar el trigger de versiones. `Note.priority` en `src/types/notes.ts` y mapeo en `NotesContext.tsx`.
-- Helper puro `src/lib/taskLevels.ts`: `isSubtask(item)` (sin `parentId`), `itemsOf(subtask)`, `flattenToTwoLevels(checklist)`, `prioritizedEntries(notes)` con test unitario (subtarea con fecha sale sin madre; madre sin fecha no sale; items nunca salen solos; orden por prioridad y fecha).
+- Helper puro `src/lib/taskLevels.ts`: `isSubtask(item)` (sin `parentId`), `itemsOf(subtask)`, `findStructureIssues(checklist)` (items con fecha/prioridad y items de nivel 3+), `applyFix(checklist, itemId, action)` (promote | stripMeta | flatten | keep), `prioritizedEntries(notes)`, con test unitario por cada regla y acción.
+- Nuevo `StructureReviewDialog.tsx` abierto desde `NotePostIt.tsx` cuando `findStructureIssues` no está vacío; decisiones "mantener" se recuerdan por item (`reviewKept` en el propio item del checklist jsonb).
 - `NotePostIt.tsx` y `TaskSheet.tsx`: ocultar prioridad/fecha en items con `parentId`; bloquear indentación de nivel 3; prioridad de la nota en la cabecera.
 - `TasksView.tsx`: sección "Prioritarias" con `prioritizedEntries`; selector de prioridad solo en subtareas.
 - `PlannerView.tsx`: solo considerar subtareas (sin `parentId`) con fecha.
