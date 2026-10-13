@@ -42,7 +42,7 @@ export const PriorityControl = ({ priority, onChange }: { priority?: Priority | 
         {priority ? priorityLabel[priority] : "Prioridad"}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="start">
+    <DropdownMenuContent align="start" className="z-[80]">
       <DropdownMenuItem onSelect={() => onChange(null)}>Sin prioridad</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => onChange("high")}><Flag className="mr-2 h-4 w-4" />Alta</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => onChange("medium")}><Flag className="mr-2 h-4 w-4" />Media</DropdownMenuItem>
@@ -76,7 +76,7 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
             <span className="whitespace-nowrap">{dateLabel}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-72 space-y-3 p-3">
+        <PopoverContent align="start" className="z-[80] w-72 space-y-3 p-3">
           <input
             type={withTime ? "datetime-local" : "date"}
             aria-label="Fecha y hora"
