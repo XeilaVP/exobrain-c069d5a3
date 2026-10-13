@@ -19,6 +19,8 @@ const AppShell = () => {
   const [view, setView] = useState<WorkspaceView>(readView);
   const [overlayNoteId, setOverlayNoteId] = useState<string | null>(null);
   const [overlaySubtaskId, setOverlaySubtaskId] = useState<string | undefined>();
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const toggleFavorites = () => setFavoritesOnly(value => !value);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -41,7 +43,7 @@ const AppShell = () => {
 
   return (
     <div className="relative flex h-[100dvh] w-full overflow-hidden bg-background">
-      {!isMobile && <SideNav view={view} onView={selectView} onOpenNote={openNote} />}
+      {!isMobile && <SideNav favoritesOnly={favoritesOnly} onToggleFavorites={toggleFavorites} view={view} onView={selectView} onOpenNote={openNote} />}
 
       {isMobile && (
         <>
@@ -59,6 +61,8 @@ const AppShell = () => {
               <div className="absolute inset-0 bg-background/65 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)} />
               <div className="relative h-full w-[min(18rem,calc(100vw-3rem))] shadow-float">
                 <SideNav
+                  favoritesOnly={favoritesOnly}
+                  onToggleFavorites={toggleFavorites}
                   view={view}
                   onView={selectView}
                   onOpenNote={openNote}
@@ -72,7 +76,7 @@ const AppShell = () => {
       )}
 
       <main className="relative min-w-0 flex-1 overflow-hidden">
-        {view === "tree" && <GraphView />}
+        {view === "tree" && <GraphView favoritesOnly={favoritesOnly} onToggleFavorites={toggleFavorites} />}
         {view === "tasks" && <TasksView onOpenNote={openNote} />}
         {view === "postits" && <PostItsView onOpenNote={openNote} />}
         {view === "planner" && <PlannerView onOpenNote={openNote} />}

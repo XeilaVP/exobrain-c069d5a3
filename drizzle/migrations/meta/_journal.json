@@ -15,6 +15,13 @@
       "when": 1791915733016,
       "tag": "0001_move_checklist_subtask",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791930041492,
+      "tag": "0002_note_favorites",
+      "breakpoints": true
     }
   ]
 }

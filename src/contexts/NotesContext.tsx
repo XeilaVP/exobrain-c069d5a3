@@ -1,4 +1,5 @@
 import { toggleAndSort } from "@/lib/checklistOrder";
+import { duplicateNoteData } from "@/lib/noteActions";
 import { subtaskTransferBundle } from "@/lib/subtaskTransfer";
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { Note, Category, ChecklistItem, NoteType } from "@/types/notes";
@@ -54,6 +55,7 @@ interface NotesContextType {
   setSelectedCategoryId: (id: string | null) => void;
   setSelectedNoteId: (id: string | null) => void;
   addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null, pos?: { x: number; y: number } | null) => Promise<Note | null>;
+  duplicateNote: (noteId: string) => Promise<Note | null>;
   moveNote: (noteId: string, newParentId: string | null) => Promise<boolean>;
   moveSubtask: (sourceId: string, targetId: string, itemId: string) => Promise<boolean>;
   getDescendantIds: (noteId: string) => Set<string>;
@@ -122,6 +124,7 @@ const dbToNote = (row: any): Note => ({
   noteType: (row.note_type as NoteType) ?? "text",
   isCollapsed: row.is_collapsed ?? true,
   icon: row.icon ?? null,
+  isFavorite: row.is_favorite ?? false,
   inTasks: row.in_tasks ?? false,
   inPostits: row.in_postits ?? false,
   inCalendar: row.in_calendar ?? false,
@@ -220,6 +223,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (updates.linkedNoteIds !== undefined) dbUpdates.linked_note_ids = updates.linkedNoteIds;
       if (updates.icon !== undefined) dbUpdates.icon = updates.icon;
       if (updates.color !== undefined) dbUpdates.color = updates.color;
+      if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite;
       if (updates.priority !== undefined) dbUpdates.priority = updates.priority;
       const { error } = await supabase.from("notes").update(dbUpdates).eq("id", id);
       if (error) { pendingUpdates.current[id] = { ...updates, ...pendingUpdates.current[id] }; throw error; }
@@ -271,6 +275,27 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       void flushNote(id).catch(() => toast.error("No se pudo guardar la nota"));
     }, 500);
   }, [flushNote]);
+
+  const duplicateNote = useCallback(async (id: string) => {
+    if (!user || movingNotes.current.has(id)) return null;
+    try {
+      await flushNote(id);
+      const original = notesRef.current.find(note => note.id === id);
+      if (!original) return null;
+      const { data, error } = await supabase.from("notes").insert({
+        ...duplicateNoteData(original), user_id: user.id,
+      } as any).select().single();
+      if (error) throw error;
+      const copy = dbToNote(data);
+      setNotes(previous => [copy, ...previous]);
+      setSelectedNoteId(copy.id);
+      toast.success("Nota duplicada");
+      return copy;
+    } catch {
+      toast.error("No se pudo duplicar la nota");
+      return null;
+    }
+  }, [user, flushNote]);
 
   const moveSubtask = useCallback(async (sourceId: string, targetId: string, itemId: string) => {
     if (movingNotes.current.has(sourceId) || movingNotes.current.has(targetId)) return false;
@@ -704,7 +729,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setViewMembership,
       notes, categories, selectedCategoryId, selectedNoteId, activeView, loading,
       setActiveView, setSelectedCategoryId, setSelectedNoteId,
-      addNote, moveNote, moveSubtask, getDescendantIds, canMoveTo, getRootNotes, updateNote, deleteNote, addCategory, updateCategory, deleteCategory,
+      addNote, duplicateNote, moveNote, moveSubtask, getDescendantIds, canMoveTo, getRootNotes, updateNote, deleteNote, addCategory, updateCategory, deleteCategory,
       addChecklistItem, toggleChecklistItem, deleteChecklistItem,
       toggleNoteCollapsed, toggleCategoryCollapsed,
       linkNotes, unlinkNotes,
