@@ -22,7 +22,7 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
         <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Tareas organizadas según las ramas de ExoBrain</p></div><span className="text-sm text-muted-foreground">{listNotes.reduce((sum, n) => sum + n.checklist.filter(i => i.style !== "bullet").length, 0)} tareas</span></div>
         <div className="space-y-3">
           {listNotes.map(note => {
-            const roots = note.checklist.filter(i => !i.parentId && i.style !== "bullet");
+            const roots = note.checklist.filter(i => !i.parentId && i.style !== "bullet").sort((a, b) => Number(a.completed) - Number(b.completed));
             const isOpen = openNotes.has(note.id);
             return (
               <article key={note.id} className="rounded-lg border border-border bg-card shadow-soft" style={{ marginLeft: Math.min(depthOf(note) * 18, 90) }}>
