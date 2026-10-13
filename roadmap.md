@@ -1,9 +1,9 @@
 # Roadmap
 
-- [ ] Favoritas persistidas y filtros compartidos con ancestros
-- [ ] Recolocar candado y usuario
-- [ ] Copiar, duplicar y creación unificada de hijas
-- [ ] Verificar pruebas y flujos móvil/escritorio
+- [x] Favoritas persistidas y filtros compartidos con ancestros
+- [x] Recolocar candado y usuario
+- [x] Copiar, duplicar y creación unificada de hijas
+- [x] Verificar pruebas y flujos móvil/escritorio
 
 - [x] Crear navegación lateral de escritorio y conservar móvil actual
 - [x] Integrar Árbol sin cambiar geometría ni gestos
