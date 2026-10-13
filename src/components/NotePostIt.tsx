@@ -13,6 +13,7 @@ import EmojiPicker from "./EmojiPicker";
 import MoveToDialog from "./MoveToDialog";
 import ColorPicker from "./ColorPicker";
 import ViewMembershipBar from "./ViewMembershipBar";
+import EditableChecklistText from "./EditableChecklistText";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 import { format, isToday, isTomorrow, isPast } from "date-fns";
@@ -36,7 +37,11 @@ const dueLabel = (iso: string, hasTime?: boolean) => {
 
 const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0 }: PostItChecklistItemProps) => {
   const dragControls = useDragControls();
-  const { toggleChecklistItem, deleteChecklistItem, updateNote, selectedNote } = useNotes();
+  const { toggleChecklistItem, deleteChecklistItem, updateNote, selectedNote, notes } = useNotes();
+  const saveItemText = (text: string) => {
+    const containing = notes.find(note => note.id === noteId);
+    if (containing) updateNote(noteId, { checklist: containing.checklist.map(i => i.id === item.id ? { ...i, text } : i) });
+  };
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -119,7 +124,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
             </button>
           )}
         </div>
-        <button
+        {item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : <button
           onClick={() => onOpenSheet?.()}
           className="flex-1 min-w-0 text-left py-1.5 basis-[80%]"
         >
@@ -136,7 +141,8 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
               )}
             </span>
           )}
-        </button>
+        </button>}
+        <button aria-label="Borrar item" onClick={() => deleteChecklistItem(noteId, item.id)} className="min-h-11 min-w-9 shrink-0 text-destructive"><Trash2 size={16} /></button>
       </Reorder.Item>
     );
   }
@@ -192,7 +198,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
       >
         <GripVertical size={14} />
       </div>
-      {checkbox}{textEl}
+      {checkbox}{item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : textEl}
       {actions}
     </Reorder.Item>
   );
@@ -735,6 +741,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
         onDeleteSubtask={(id) => {
           updateNote(noteId, { checklist: note.checklist.filter(i => i.id !== id) });
         }}
+        onEditSubtask={(id, text) => updateNote(noteId, { checklist: note.checklist.map(i => i.id === id ? { ...i, text } : i) })}
         onMoveSubtask={(id, dir) => {
           if (!sheetTaskId) return;
           const subs = note.checklist.filter(i => i.parentId === sheetTaskId);

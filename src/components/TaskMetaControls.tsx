@@ -51,7 +51,7 @@ export const PriorityControl = ({ priority, onChange }: { priority?: Priority | 
   </DropdownMenu>
 );
 
-const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityChange }: TaskMetaControlsProps) => {
+export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaControlsProps, "dueAt" | "hasTime" | "onDateChange">) => {
   const [open, setOpen] = useState(false);
   const [withTime, setWithTime] = useState(!!hasTime);
   const [value, setValue] = useState(localValue(dueAt, hasTime));
@@ -66,7 +66,6 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
     : "Añadir fecha";
 
   return (
-    <div className="flex min-w-0 flex-col items-start gap-1">
       <Popover open={open} onOpenChange={(nextOpen) => {
         if (nextOpen) { setValue(localValue(dueAt, hasTime)); setWithTime(!!hasTime); }
         setOpen(nextOpen);
@@ -100,9 +99,14 @@ const TaskMetaControls = ({ dueAt, hasTime, priority, onDateChange, onPriorityCh
         </PopoverContent>
       </Popover>
 
-      <PriorityControl priority={priority} onChange={onPriorityChange} />
-    </div>
   );
 };
+
+const TaskMetaControls = ({ priority, onPriorityChange, ...dateProps }: TaskMetaControlsProps) => (
+  <div className="flex min-w-0 flex-col items-start gap-1">
+    <DateControl {...dateProps} />
+    <PriorityControl priority={priority} onChange={onPriorityChange} />
+  </div>
+);
 
 export default TaskMetaControls;

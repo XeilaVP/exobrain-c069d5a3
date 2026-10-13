@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { ChecklistItem } from "@/types/notes";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { DateControl, PriorityControl } from "./TaskMetaControls";
+import EditableChecklistText from "./EditableChecklistText";
 
-const SubtaskRow = ({ item, onToggle, onDelete }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void }) => {
+const SubtaskRow = ({ item, onToggle, onDelete, onEdit }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void; onEdit: (text: string) => void }) => {
   const controls = useDragControls();
   return (
     <Reorder.Item
@@ -29,9 +31,7 @@ const SubtaskRow = ({ item, onToggle, onDelete }: { item: ChecklistItem; onToggl
         className="text-primary min-h-11 min-w-11 flex items-center justify-center">
         {item.completed ? <CheckSquare size={18} /> : <Square size={18} />}
       </button>
-      <span className={`flex-1 text-sm font-body ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-        {item.text}
-      </span>
+      <EditableChecklistText text={item.text} completed={item.completed} onSave={onEdit} />
       <button onClick={onDelete} aria-label="Borrar"
         className="text-destructive min-h-11 min-w-11 flex items-center justify-center">
         <Trash2 size={16} />
@@ -50,6 +50,7 @@ interface TaskSheetProps {
   onAddSubtask: (text: string) => void;
   onToggleSubtask: (id: string) => void;
   onDeleteSubtask: (id: string) => void;
+  onEditSubtask: (id: string, text: string) => void;
   onMoveSubtask: (id: string, dir: -1 | 1) => void;
   onReorderSubtasks?: (newOrder: ChecklistItem[]) => void;
   onClose: () => void;
@@ -60,7 +61,7 @@ interface TaskSheetProps {
 
 const TaskSheet = ({
   open, noteId, task, allItems, onChange, onDelete,
-  onAddSubtask, onToggleSubtask, onDeleteSubtask, onMoveSubtask, onReorderSubtasks, onClose,
+  onAddSubtask, onToggleSubtask, onDeleteSubtask, onEditSubtask, onMoveSubtask, onReorderSubtasks, onClose,
   navigation, relatedNotes, checklistItems = false,
 }: TaskSheetProps) => {
   const [title, setTitle] = useState("");
@@ -203,10 +204,14 @@ const TaskSheet = ({
               </div>
 
               {/* Date + time (task style only) */}
-              {task.style !== "bullet" && (
+              {task.style !== "bullet" && !task.parentId && (
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Fecha</label>
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-2 mt-1">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 mt-1">
+                  <DateControl dueAt={task.dueAt} hasTime={task.hasTime} onDateChange={(dueAt, hasTime) => onChange({ dueAt, hasTime })} />
+                  <PriorityControl priority={task.priority} onChange={priority => onChange({ priority: priority ?? undefined })} />
+                  {/* Legacy date controls replaced by unified selector. */}
+                  {false && <>
                   <div className="relative flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
                     <CalendarIcon size={16} className="text-muted-foreground mr-1" />
                     <input
@@ -239,6 +244,7 @@ const TaskSheet = ({
                       )}
                     </div>
                   )}
+                  </>}
                 </div>
                 {dueDate && (
                   <p className="text-xs text-muted-foreground font-body mt-1.5">
@@ -266,6 +272,7 @@ const TaskSheet = ({
                       item={s}
                       onToggle={() => onToggleSubtask(s.id)}
                       onDelete={() => onDeleteSubtask(s.id)}
+                      onEdit={text => onEditSubtask(s.id, text)}
                     />
                   ))}
                 </Reorder.Group>
