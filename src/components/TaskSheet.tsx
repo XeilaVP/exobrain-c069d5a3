@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
-import { X, Calendar as CalendarIcon, Clock, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, CalendarPlus, CalendarCheck2, CalendarX, Dot, ListChecks, Copy, Flag } from "lucide-react";
+import { X, Calendar as CalendarIcon, Clock, Trash2, Plus, CornerDownRight, CheckSquare, Square, GripVertical, Dot, ListChecks, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 import { ChecklistItem } from "@/types/notes";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 
 const SubtaskRow = ({ item, onToggle, onDelete }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void }) => {
   const controls = useDragControls();
@@ -64,7 +63,6 @@ const TaskSheet = ({
   onAddSubtask, onToggleSubtask, onDeleteSubtask, onMoveSubtask, onReorderSubtasks, onClose,
   navigation, relatedNotes, checklistItems = false,
 }: TaskSheetProps) => {
-  const gcal = useGoogleCalendar();
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
   const [newSub, setNewSub] = useState("");
@@ -208,34 +206,34 @@ const TaskSheet = ({
               {task.style !== "bullet" && (
               <div>
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Fecha</label>
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <div className="relative flex items-center bg-muted rounded-md px-2 min-h-11">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] items-center gap-2 mt-1">
+                  <div className="relative flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
                     <CalendarIcon size={16} className="text-muted-foreground mr-1" />
                     <input
                       type="date"
                       value={dueDate ? format(dueDate, "yyyy-MM-dd") : ""}
                       onChange={e => setDate(e.target.value)}
-                      className="bg-transparent outline-none text-sm text-foreground font-body py-2"
+                      className="min-w-0 w-full bg-transparent outline-none text-sm text-foreground font-body py-2"
                     />
                     {dueDate && (
                       <button onClick={() => onChange({ dueAt: null, hasTime: false })}
-                        aria-label="Quitar fecha" className="ml-1 text-muted-foreground min-h-9 min-w-9 flex items-center justify-center">
+                        aria-label="Quitar fecha" className="ml-1 shrink-0 text-muted-foreground min-h-9 w-5 flex items-center justify-center">
                         <X size={14} />
                       </button>
                     )}
                   </div>
                   {dueDate && (
-                    <div className="flex items-center bg-muted rounded-md px-2 min-h-11">
+                    <div className="flex min-w-0 items-center bg-muted rounded-md px-2 min-h-11">
                       <Clock size={16} className="text-muted-foreground mr-1" />
                       <input
                         type="time"
                         value={task.hasTime && dueDate ? format(dueDate, "HH:mm") : ""}
                         onChange={e => setTime(e.target.value)}
-                        className="bg-transparent outline-none text-sm text-foreground font-body py-2"
+                        className="min-w-0 w-full bg-transparent outline-none text-sm text-foreground font-body py-2"
                       />
                       {task.hasTime && (
                         <button onClick={() => onChange({ hasTime: false })}
-                          aria-label="Quitar hora" className="ml-1 text-muted-foreground min-h-9 min-w-9 flex items-center justify-center">
+                          aria-label="Quitar hora" className="ml-1 shrink-0 text-muted-foreground min-h-9 w-5 flex items-center justify-center">
                           <X size={14} />
                         </button>
                       )}
@@ -249,74 +247,6 @@ const TaskSheet = ({
                 )}
               </div>
               )}
-
-              {task.style !== "bullet" && (
-                <div>
-                  <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Prioridad</label>
-                  <div className="relative mt-1 flex min-h-11 items-center rounded-md bg-muted px-3">
-                    <Flag size={16} className="mr-2 text-muted-foreground" />
-                    <select
-                      value={task.priority ?? ""}
-                      onChange={e => onChange({ priority: (e.target.value || undefined) as ChecklistItem["priority"] })}
-                      className="min-h-11 flex-1 bg-transparent text-sm text-foreground outline-none font-body"
-                    >
-                      <option value="">Sin prioridad</option>
-                      <option value="high">Alta</option>
-                      <option value="medium">Media</option>
-                      <option value="low">Baja</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {/* Google Calendar */}
-              {task.style !== "bullet" && dueDate && (() => {
-                const mapping = gcal.mappings[task.id];
-                const isSynced = mapping?.sync_status === "synced";
-                const doSync = () => gcal.syncTask({
-                  note_id: noteId, task_id: task.id, title: task.text,
-                  notes: task.notes, due_at: task.dueAt!, has_time: task.hasTime,
-                });
-                return (
-                  <div>
-                    <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider font-body">Google Calendar</label>
-                    <div className="mt-1">
-                      {!gcal.connected ? (
-                        <button onClick={gcal.connect}
-                          className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-muted hover:bg-muted/70 min-h-11 w-full font-body text-foreground">
-                          <CalendarPlus size={16} /> Conectar Google Calendar
-                        </button>
-                      ) : isSynced ? (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="flex items-center gap-1.5 text-sm text-primary font-body">
-                            <CalendarCheck2 size={16} /> En tu calendario
-                          </span>
-                          <button onClick={doSync}
-                            className="text-xs px-2 py-1.5 rounded bg-muted min-h-9 font-body">
-                            Actualizar
-                          </button>
-                          <button onClick={() => gcal.removeTask(noteId, task.id)}
-                            className="text-xs px-2 py-1.5 rounded bg-muted text-destructive min-h-9 font-body flex items-center gap-1">
-                            <CalendarX size={14} /> Quitar
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button onClick={doSync}
-                            className="flex items-center gap-2 text-sm px-3 py-2 rounded-md bg-primary text-primary-foreground min-h-11 font-body">
-                            <CalendarPlus size={16} /> Añadir a Google Calendar
-                          </button>
-                          <button onClick={() => gcal.declineTask(noteId, task.id)}
-                            className="text-xs px-2 py-1.5 rounded bg-muted min-h-9 font-body">
-                            No
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-
 
 
               {/* Subtasks */}
