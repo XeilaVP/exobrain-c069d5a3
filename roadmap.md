@@ -1,5 +1,10 @@
 # Roadmap
 
+- [ ] Favoritas persistidas y filtros compartidos con ancestros
+- [ ] Recolocar candado y usuario
+- [ ] Copiar, duplicar y creación unificada de hijas
+- [ ] Verificar pruebas y flujos móvil/escritorio
+
 - [x] Crear navegación lateral de escritorio y conservar móvil actual
 - [x] Integrar Árbol sin cambiar geometría ni gestos
 - [x] Crear vista Tasks conectada a listas reales
