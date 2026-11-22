@@ -8,6 +8,7 @@ import { DateControl, PriorityControl } from "./TaskMetaControls";
 import EditableChecklistText from "./EditableChecklistText";
 import TaskDescription from "./TaskDescription";
 import SubtaskParentControl from "./SubtaskParentControl";
+import { useResizableWindow } from "@/hooks/useResizableWindow";
 
 const SubtaskRow = ({ item, onToggle, onDelete, onEdit }: { item: ChecklistItem; onToggle: () => void; onDelete: () => void; onEdit: (text: string) => void }) => {
   const controls = useDragControls();
@@ -68,6 +69,8 @@ const TaskSheet = ({
   const [title, setTitle] = useState("");
   const [newSub, setNewSub] = useState("");
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  const desktop = window.innerWidth >= 768;
+  const win = useResizableWindow("task-sheet", { w: 448, h: Math.min(680, Math.round(window.innerHeight * 0.8)) }, desktop);
 
   useEffect(() => {
     if (task) {
@@ -101,9 +104,12 @@ const TaskSheet = ({
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="bg-card border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full h-[96vh] md:h-auto md:max-w-md md:max-h-[80vh] flex flex-col overflow-hidden"
+            className="relative bg-card border border-border rounded-t-2xl md:rounded-2xl shadow-2xl w-full h-[96vh] md:max-w-none flex flex-col overflow-hidden"
+            style={desktop ? { width: win.width, height: win.height } : undefined}
+            data-no-pan
             onClick={e => e.stopPropagation()}
           >
+            {win.handles}
             {/* Grabber */}
             <div className="flex justify-center pt-2 pb-1 md:hidden">
               <div className="w-10 h-1 rounded-full bg-muted-foreground/40" />
@@ -169,7 +175,7 @@ const TaskSheet = ({
               <TaskDescription value={task.notes ?? ""} onSave={notes => onChange({ notes })} />
 
               {/* Date + time (task style only) */}
-              {task.style !== "bullet" && !task.parentId && (
+              {(
               <div>
                 <div className="flex min-w-0 flex-wrap items-center gap-2 mt-1">
                   <DateControl dueAt={task.dueAt} hasTime={task.hasTime} onDateChange={(dueAt, hasTime) => onChange({ dueAt, hasTime })} />

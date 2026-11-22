@@ -20,6 +20,7 @@ import ViewMembershipBar from "./ViewMembershipBar";
 import EditableChecklistText from "./EditableChecklistText";
 import TaskDescription from "./TaskDescription";
 import SubtaskDetails from "./SubtaskDetails";
+import { useResizableWindow } from "@/hooks/useResizableWindow";
 import { DEFAULT_CATEGORY_COLOR } from "@/lib/categoryColors";
 
 import { format, isToday, isTomorrow, isPast } from "date-fns";
@@ -42,40 +43,24 @@ const dueLabel = (iso: string, hasTime?: boolean) => {
   return hasTime ? format(d, "d MMM HH:mm", { locale: es }) : format(d, "d MMM", { locale: es });
 };
 
-const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0, onDragHandle }: PostItChecklistItemProps) => {
-  const { toggleChecklistItem, deleteChecklistItem, updateNote, selectedNote, notes } = useNotes();
-  const saveItemText = (text: string) => {
-    const containing = notes.find(note => note.id === noteId);
-    if (containing) updateNote(noteId, { checklist: containing.checklist.map(i => i.id === item.id ? { ...i, text } : i) });
+/** Fila única de tarea/subtarea/item: la misma en la nota y en Tasks. */
+export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0, onDragHandle }: PostItChecklistItemProps) => {
+  const { toggleChecklistItem, deleteChecklistItem, updateNote, notes } = useNotes();
+  const containing = () => notes.find(note => note.id === noteId);
+  const patchSelf = (patch: Partial<ChecklistItem>) => {
+    const n = containing();
+    if (n) updateNote(noteId, { checklist: n.checklist.map(i => i.id === item.id ? { ...i, ...patch } : i) });
   };
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(item.text);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const draggedRef = useRef(false);
-
-  const autoGrow = (el: HTMLTextAreaElement | null) => {
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = el.scrollHeight + "px";
-  };
-
-  useEffect(() => { if (isEditing) { inputRef.current?.focus(); autoGrow(inputRef.current); } }, [isEditing]);
-
-  const commitEdit = () => {
-    if (!selectedNote) { setIsEditing(false); return; }
-    const trimmed = editText.trim();
-    if (trimmed && trimmed !== item.text) {
-      updateNote(noteId, { checklist: selectedNote.checklist.map(i => i.id === item.id ? { ...i, text: trimmed } : i) });
-    } else if (!trimmed) {
-      setEditText(item.text);
-    }
-    setIsEditing(false);
-  };
-
-  const startEdit = () => { setEditText(item.text); setIsEditing(true); };
   const rowRef = useRef<HTMLDivElement>(null);
   const [metaOpen, setMetaOpen] = useState(false);
+
+  const autoGrow = (el: HTMLTextAreaElement | null) => { if (!el) return; el.style.height = "auto"; el.style.height = el.scrollHeight + "px"; };
+  useEffect(() => { if (isEditing) { inputRef.current?.focus(); autoGrow(inputRef.current); } }, [isEditing]);
   useEffect(() => {
     if (!metaOpen) return;
     const close = (e: PointerEvent) => {
@@ -86,154 +71,180 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [metaOpen]);
-  const patchSelf = (patch: Partial<ChecklistItem>) => {
-    const containing = notes.find(note => note.id === noteId);
-    if (containing) updateNote(noteId, { checklist: containing.checklist.map(i => i.id === item.id ? { ...i, ...patch } : i) });
+
+  const commitEdit = () => {
+    const trimmed = editText.trim();
+    if (trimmed && trimmed !== item.text) patchSelf({ text: trimmed });
+    else if (!trimmed) setEditText(item.text);
+    setIsEditing(false);
   };
-  const isRootTask = item.style !== "bullet";
-  const metaEditor = isRootTask && metaOpen ? (
-    <div className="basis-full pl-8 pt-1" data-no-pan>
-      <TaskMetaControls dueAt={item.dueAt} hasTime={item.hasTime} priority={item.priority}
-        onDateChange={(dueAt, hasTime) => patchSelf({ dueAt, hasTime })}
-        onPriorityChange={priority => patchSelf({ priority: priority ?? undefined })} />
-    </div>
-  ) : null;
-  const openButton = isRootTask ? (
-    <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
-      className="shrink-0 min-h-9 min-w-9 flex items-center justify-center text-muted-foreground hover:text-foreground"><SquareArrowOutUpRight size={14} /></button>
-  ) : null;
 
   const isBullet = item.style === "bullet";
+  const toggleStyle = () => patchSelf({ style: isBullet ? "task" : "bullet" });
+  const icon = mobile ? 20 : 16;
+  const hit = mobile ? "min-h-10 min-w-9" : "min-h-7 min-w-7";
+  const hasMeta = !!item.dueAt || !!item.priority;
+  const showMeta = metaOpen || hasMeta;
 
-  const toggleStyle = () => {
-    if (!selectedNote) return;
-    updateNote(noteId, {
-      checklist: selectedNote.checklist.map(i => i.id === item.id ? { ...i, style: isBullet ? "task" : "bullet" as const } : i),
-    });
-  };
-
-  const checkbox = isBullet ? (
-    <button onClick={toggleStyle} aria-label="Cambiar a tarea"
-      className={`text-primary shrink-0 flex items-center justify-center ${mobile ? "min-h-11 min-w-11" : ""}`}>
-      <Dot size={mobile ? 28 : 20} />
-    </button>
-  ) : (
-    <button onClick={() => toggleChecklistItem(noteId, item.id)} aria-label={item.completed ? "Marcar como pendiente" : "Marcar como completada"}
-      onDoubleClick={toggleStyle}
-      title="Doble clic: convertir en viñeta"
-      className={`text-primary shrink-0 flex items-center justify-center ${mobile ? "min-h-11 min-w-11" : ""}`}>
-      {item.completed ? <CheckSquare size={mobile ? 22 : 16} /> : <Square size={mobile ? 22 : 16} />}
-    </button>
-  );
-
-  if (mobile) {
-    const overdue = item.dueAt && !item.completed && isPast(new Date(item.dueAt)) && !isToday(new Date(item.dueAt));
-    return (
-      <div
-        ref={rowRef}
-        className="flex flex-wrap items-center gap-1 bg-background/50 rounded-md px-1 py-1 min-h-14"
-      >
-        <div
-          onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }}
-          style={{ touchAction: "none" }}
-          aria-label="Arrastrar para reordenar"
-          className="shrink-0 w-8 h-11 flex items-center justify-center text-muted-foreground/60 cursor-grab active:cursor-grabbing"
-        >
-          <GripVertical size={18} />
-        </div>
-        <div className="shrink-0 w-9 h-9 flex items-center justify-center">
-          {isBullet ? (
-            <button onClick={toggleStyle} aria-label="Cambiar a tarea" className="text-primary w-9 h-9 flex items-center justify-center">
-              <Dot size={24} />
-            </button>
-          ) : (
-            <button onClick={() => toggleChecklistItem(noteId, item.id)}
-              onDoubleClick={toggleStyle}
-              aria-label={item.completed ? "Marcar como pendiente" : "Marcar como completada"}
-              className="text-primary w-9 h-9 flex items-center justify-center">
-              {item.completed ? <CheckSquare size={20} /> : <Square size={20} />}
-            </button>
-          )}
-        </div>
-        {item.parentId ? <div className="flex-1 min-w-0" onClick={() => isRootTask && setMetaOpen(true)}><EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /></div> : <button
-          onClick={() => isRootTask ? setMetaOpen(o => !o) : onOpenSheet?.()}
-          className="flex-1 min-w-0 text-left py-1.5 basis-[80%]"
-        >
-          <span className={`block text-[15px] font-body leading-snug break-words ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
-            {item.text || <span className="italic text-muted-foreground/60">Sin título</span>}
-          </span>
-          {(item.dueAt || subtaskCount > 0) && (
-            <span className="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] font-body text-muted-foreground">
-              {item.dueAt && <span className={`inline-flex items-center gap-0.5 whitespace-nowrap ${overdue ? "text-destructive" : ""}`}><CalendarIcon size={11} />{dueLabel(item.dueAt, item.hasTime)}</span>}
-              {subtaskCount > 0 && (
-                <span className="inline-flex items-center gap-0.5">
-                  <CornerDownRight size={11} />{subtaskCount}
-                </span>
-              )}
-            </span>
-          )}
-        </button>}
-        {openButton}
-        <button aria-label="Borrar item" onClick={() => deleteChecklistItem(noteId, item.id)} className="min-h-11 min-w-9 shrink-0 text-destructive"><Trash2 size={16} /></button>
-        {metaEditor}
-      </div>
-    );
-  }
-
-
-  const textEl = isEditing ? (
+  const nameEl = isEditing ? (
     <textarea ref={inputRef} value={editText} onChange={e => { setEditText(e.target.value); autoGrow(e.currentTarget); }}
       onBlur={commitEdit}
       onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitEdit(); } if (e.key === "Escape") { setEditText(item.text); setIsEditing(false); } }}
       rows={1}
-      className="flex-1 text-sm font-body bg-muted rounded px-1.5 py-0.5 outline-none text-foreground focus:ring-1 focus:ring-ring resize-none overflow-hidden leading-snug" />
+      className={`w-full font-body bg-muted rounded px-1.5 py-0.5 outline-none text-foreground focus:ring-1 focus:ring-ring resize-none overflow-hidden leading-snug ${mobile ? "text-[15px]" : "text-sm"}`} />
   ) : (
     <span
       onPointerDown={e => { dragStartRef.current = { x: e.clientX, y: e.clientY }; draggedRef.current = false; }}
       onPointerMove={e => {
         if (!dragStartRef.current) return;
-        const dx = e.clientX - dragStartRef.current.x;
-        const dy = e.clientY - dragStartRef.current.y;
-        if (Math.hypot(dx, dy) > 5) draggedRef.current = true;
+        if (Math.hypot(e.clientX - dragStartRef.current.x, e.clientY - dragStartRef.current.y) > 5) draggedRef.current = true;
       }}
-      onPointerUp={() => {
-        if (!draggedRef.current) { startEdit(); if (isRootTask) setMetaOpen(true); }
-        dragStartRef.current = null;
-      }}
-      className={`flex-1 text-sm font-body select-none ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}
-    >{item.text}</span>
-  );
-
-  const actions = (
-    <>
-      {isRootTask && <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
-        className="opacity-60 hover:opacity-100 text-muted-foreground shrink-0"><SquareArrowOutUpRight size={14} /></button>}
-      <button onClick={() => { navigator.clipboard.writeText(item.text); toast.success("Copiado"); }}
-        className="opacity-0 group-hover:opacity-50 text-muted-foreground shrink-0"><Copy size={12} /></button>
-      <Trash2 size={12} className="opacity-0 group-hover:opacity-50 text-destructive cursor-pointer shrink-0"
-        onClick={() => deleteChecklistItem(noteId, item.id)} />
-    </>
+      onPointerUp={() => { if (!draggedRef.current) { setEditText(item.text); setIsEditing(true); setMetaOpen(true); } dragStartRef.current = null; }}
+      className={`block cursor-text select-none break-words leading-snug font-body py-0.5 ${mobile ? "text-[15px]" : "text-sm"} ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}
+    >{item.text || <span className="italic text-muted-foreground/60">Sin título</span>}
+      {subtaskCount > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[11px] text-muted-foreground"><CornerDownRight size={11} />{subtaskCount}</span>}
+    </span>
   );
 
   return (
-    <div ref={rowRef}
-        className="flex flex-wrap items-center gap-1.5 group bg-background/50 rounded px-1.5 py-1"
-    >
-      <div
-        onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }}
-        style={{ touchAction: "none" }}
-        aria-label="Arrastrar para reordenar"
-        className="shrink-0 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing"
-      >
-        <GripVertical size={14} />
+    <div ref={rowRef} data-task-row className="group flex items-start gap-x-1.5 rounded bg-background/50 px-1 py-1">
+      <div onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }} style={{ touchAction: "none" }} aria-label="Arrastrar para reordenar"
+        className={`shrink-0 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing ${mobile ? "h-10 w-6" : "h-7 w-4"}`}>
+        <GripVertical size={mobile ? 18 : 14} />
       </div>
-      {checkbox}{item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : textEl}
-      {actions}
-      {metaEditor}
+      {isBullet ? (
+        <button onClick={toggleStyle} aria-label="Cambiar a tarea" className={`text-primary shrink-0 flex items-center justify-center ${hit}`}><Dot size={mobile ? 24 : 20} /></button>
+      ) : (
+        <button onClick={() => toggleChecklistItem(noteId, item.id)} onDoubleClick={toggleStyle} title="Doble clic: convertir en viñeta"
+          aria-label={item.completed ? "Marcar como pendiente" : "Marcar como completada"}
+          className={`text-primary shrink-0 flex items-center justify-center ${hit}`}>
+          {item.completed ? <CheckSquare size={icon} /> : <Square size={icon} />}
+        </button>
+      )}
+      {/* El nombre ocupa el espacio libre y nunca baja de ~12rem: si no cabe, los controles saltan de línea */}
+      <div className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 ${mobile ? "min-h-10" : "min-h-7"}`}>
+      <div className="min-w-[5rem] flex-[1_1_auto]">{nameEl}</div>
+      {showMeta && <div className="flex shrink-0 items-center gap-1.5" data-no-pan>
+        <TaskMetaControls dueAt={item.dueAt} hasTime={item.hasTime} priority={item.priority}
+          onDateChange={(dueAt, hasTime) => patchSelf({ dueAt, hasTime })}
+          onPriorityChange={priority => patchSelf({ priority: priority ?? undefined })} />
+      </div>}
+      </div>
+      <div className="flex shrink-0 items-center">
+        <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
+          className={`flex items-center justify-center text-muted-foreground hover:text-foreground ${hit}`}><SquareArrowOutUpRight size={14} /></button>
+        {!mobile && <button onClick={() => { navigator.clipboard.writeText(item.text); toast.success("Copiado"); }} aria-label="Copiar"
+          className={`flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-60 ${hit}`}><Copy size={12} /></button>}
+        <button aria-label="Borrar item" onClick={() => deleteChecklistItem(noteId, item.id)}
+          className={`flex items-center justify-center text-destructive ${mobile ? "" : "opacity-0 group-hover:opacity-60 focus:opacity-100"} ${hit}`}><Trash2 size={mobile ? 16 : 12} /></button>
+      </div>
     </div>
   );
 };
 
+
+/** Lista de tareas de una nota. Se usa igual dentro de la nota y embebida en Tasks. */
+export const NoteChecklist = ({ noteId, mobile, onOpenItem, onAddWithDetails, rootId }: { noteId: string; mobile: boolean; onOpenItem: (itemId: string) => void; onAddWithDetails?: (itemId: string) => void; rootId?: string }) => {
+  const { notes, updateNote, addChecklistItem } = useNotes();
+  const note = notes.find(n => n.id === noteId);
+  const [newItemText, setNewItemText] = useState("");
+  const isMobile = mobile;
+  const [dragItemId, setDragItemId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ targetId: string; pos: DropPosition } | null>(null);
+  const startItemDrag = (dragId: string, _e: React.PointerEvent) => {
+    setDragItemId(dragId);
+    let current: { targetId: string; pos: DropPosition } | null = null;
+    const move = (ev: PointerEvent) => {
+      const checklist = notesRef.current.find(n => n.id === noteId)?.checklist ?? [];
+      const row = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest("[data-item-id]") as HTMLElement | null;
+      let next: typeof current = null;
+      if (row) {
+        const targetId = row.dataset.itemId!;
+        const r = row.getBoundingClientRect();
+        const f = (ev.clientY - r.top) / r.height;
+        const target = checklist.find(i => i.id === targetId);
+        let pos: DropPosition = f < 0.3 ? "before" : f > 0.7 ? "after" : (target && !target.parentId ? "inside" : f < 0.5 ? "before" : "after");
+        if (!canDrop(checklist, dragId, targetId, pos) && pos === "inside") pos = f < 0.5 ? "before" : "after";
+        if (canDrop(checklist, dragId, targetId, pos)) next = { targetId, pos };
+      }
+      if (next?.targetId !== current?.targetId || next?.pos !== current?.pos) { current = next; setDropTarget(next); }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const checklist = notesRef.current.find(n => n.id === noteId)?.checklist;
+      if (current && checklist) updateNote(noteId, { checklist: moveChecklistItem(checklist, dragId, current.targetId, current.pos) });
+      setDragItemId(null); setDropTarget(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
+  if (!note) return null;
+  const visible = rootId ? note.checklist.filter(i => i.parentId === rootId) : note.checklist;
+  const handleAddItem = () => {
+    const text = newItemText.trim();
+    if (!text) return;
+    if (rootId) updateNote(noteId, { checklist: [...note.checklist, { id: crypto.randomUUID(), text, completed: false, parentId: rootId }] });
+    else addChecklistItem(noteId, text);
+    setNewItemText("");
+  };
+  const setSheetTaskId = (id: string) => (onAddWithDetails ?? onOpenItem)(id);
+  return (
+    <>
+            <div className="space-y-1">
+              {visible.map(item => {
+                const subCount = note.checklist.filter(s => s.parentId === item.id).length;
+                const drop = dropTarget?.targetId === item.id ? dropTarget.pos : null;
+                return (
+                  <div key={item.id} data-item-id={item.id}
+                    className={`relative rounded ${item.parentId && !rootId ? "ml-7 md:ml-6" : ""} ${dragItemId === item.id ? "opacity-40" : ""} ${drop === "inside" ? "ring-2 ring-primary bg-primary/10" : ""}`}>
+                    {drop === "before" && <span aria-hidden className="pointer-events-none absolute -top-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
+                    {drop === "after" && <span aria-hidden className="pointer-events-none absolute -bottom-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
+                    {drop === "inside" && <CornerDownRight aria-hidden size={14} className="pointer-events-none absolute -left-5 top-1/2 -translate-y-1/2 text-primary" />}
+                    <PostItChecklistItem item={item} noteId={noteId} mobile={isMobile}
+                      subtaskCount={subCount}
+                      onDragHandle={e => startItemDrag(item.id, e)}
+                      onOpenSheet={() => onOpenItem(item.id)} />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-end gap-1.5 mt-2">
+              <textarea value={newItemText}
+                onChange={e => {
+                  setNewItemText(e.target.value);
+                  e.currentTarget.style.height = "auto";
+                  e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
+                }}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddItem(); (e.currentTarget as HTMLTextAreaElement).style.height = "auto"; } }}
+                placeholder="Añadir tarea..." rows={1}
+                className="flex-1 text-base md:text-sm bg-muted rounded px-2 py-2.5 md:py-1.5 outline-none text-foreground placeholder:text-muted-foreground font-body resize-none overflow-hidden leading-snug max-h-40 min-h-11 md:min-h-0" />
+              <button onClick={handleAddItem} aria-label="Añadir tarea" className="rounded bg-primary text-primary-foreground hover:opacity-90 shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1.5 flex items-center justify-center">
+                <Plus size={isMobile ? 20 : 14} />
+              </button>
+              <button
+                onClick={async () => {
+                  const text = newItemText.trim() || "Nueva tarea";
+                  const newItem: ChecklistItem = { id: crypto.randomUUID(), text, completed: false };
+                  const newChecklist = [...note.checklist, newItem];
+                  updateNote(noteId, { checklist: newChecklist });
+                  setNewItemText("");
+                  setSheetTaskId(newItem.id);
+                }}
+                aria-label="Añadir tarea con detalles"
+                title="Añadir con fecha, notas, subtareas"
+                className="rounded bg-muted text-foreground hover:bg-muted/70 shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1.5 flex items-center justify-center"
+              >
+                <MoreHorizontal size={isMobile ? 20 : 14} />
+              </button>
+            </div>
+              </>
+  );
+};
 
 interface NotePostItProps {
   noteId: string;
@@ -273,45 +284,21 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
 
   useEffect(() => { setSelectedNoteId(noteId); }, [noteId, setSelectedNoteId]);
 
-  const [dragItemId, setDragItemId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ targetId: string; pos: DropPosition } | null>(null);
-  const startItemDrag = (dragId: string, _e: React.PointerEvent) => {
-    setDragItemId(dragId);
-    let current: { targetId: string; pos: DropPosition } | null = null;
-    const move = (ev: PointerEvent) => {
-      const checklist = notesRef.current.find(n => n.id === noteId)?.checklist ?? [];
-      const row = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest("[data-item-id]") as HTMLElement | null;
-      let next: typeof current = null;
-      if (row) {
-        const targetId = row.dataset.itemId!;
-        const r = row.getBoundingClientRect();
-        const f = (ev.clientY - r.top) / r.height;
-        const target = checklist.find(i => i.id === targetId);
-        let pos: DropPosition = f < 0.3 ? "before" : f > 0.7 ? "after" : (target && !target.parentId ? "inside" : f < 0.5 ? "before" : "after");
-        if (!canDrop(checklist, dragId, targetId, pos) && pos === "inside") pos = f < 0.5 ? "before" : "after";
-        if (canDrop(checklist, dragId, targetId, pos)) next = { targetId, pos };
-      }
-      if (next?.targetId !== current?.targetId || next?.pos !== current?.pos) { current = next; setDropTarget(next); }
-    };
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
-      const checklist = notesRef.current.find(n => n.id === noteId)?.checklist;
-      if (current && checklist) updateNote(noteId, { checklist: moveChecklistItem(checklist, dragId, current.targetId, current.pos) });
-      setDragItemId(null); setDropTarget(null);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    window.addEventListener("pointercancel", up);
-  };
-  const notesRef = useRef(notes);
-  notesRef.current = notes;
 
   const handleReorder = useCallback((newOrder: any) => {
     if (!note) return;
     updateNote(noteId, { checklist: newOrder });
   }, [note, noteId, updateNote]);
+
+  const isMobile = window.innerWidth < 768;
+  const isOverlay = presentation === "overlay";
+  const defaultW = isOverlay ? Math.min(680, window.innerWidth - 48) : maximized ? Math.min(760, window.innerWidth - 48) : Math.min(400, window.innerWidth - 32);
+  const defaultH = isOverlay ? Math.min(820, window.innerHeight - 64) : window.innerHeight - 32;
+  const win = useResizableWindow(isOverlay ? "note-overlay" : maximized ? "note-panel-max" : "note-panel", { w: defaultW, h: defaultH }, !isMobile, isOverlay ? "center" : "right");
+  const panelWidth = isMobile ? window.innerWidth - 12 : win.width;
+  const panelHeight = isMobile ? Math.round(window.innerHeight * 0.92) : win.height;
+  const left = isMobile ? 6 : isOverlay ? Math.round((win.vp.w - panelWidth) / 2) : win.vp.w - panelWidth - 16;
+  const top = isMobile ? window.innerHeight - panelHeight - 6 : isOverlay ? Math.round((win.vp.h - panelHeight) / 2) : 16;
 
   if (!note) return null;
 
@@ -339,26 +326,6 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
     (linkSearch === "" || n.title.toLowerCase().includes(linkSearch.toLowerCase()))
   );
 
-  const handleAddItem = () => {
-    if (newItemText.trim()) {
-      addChecklistItem(noteId, newItemText.trim());
-      setNewItemText("");
-    }
-  };
-
-  const isMobile = window.innerWidth < 768;
-  // Panel lateral contextual (escritorio) / hoja inferior casi completa (móvil)
-  const isOverlay = presentation === "overlay";
-  const panelWidth = isMobile
-    ? window.innerWidth - 12
-    : isOverlay
-      ? Math.min(680, window.innerWidth - 48)
-    : maximized
-      ? Math.min(760, window.innerWidth - 48)
-      : Math.min(400, window.innerWidth - 32);
-  const panelHeight = isMobile ? Math.round(window.innerHeight * 0.92) : isOverlay ? Math.min(820, window.innerHeight - 64) : window.innerHeight - 32;
-  const left = isMobile ? 6 : isOverlay ? Math.round((window.innerWidth - panelWidth) / 2) : window.innerWidth - panelWidth - 16;
-  const top = isMobile ? window.innerHeight - panelHeight - 6 : isOverlay ? Math.round((window.innerHeight - panelHeight) / 2) : 16;
 
   return (
     <>
@@ -371,8 +338,8 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
       style={{ left, top, width: panelWidth, height: panelHeight }}
       data-no-pan
       onClick={e => e.stopPropagation()}
-
     >
+      {win.handles}
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 shrink-0">
 
@@ -566,53 +533,7 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
                 <span className="text-xs md:text-[10px] text-muted-foreground font-body font-normal">{completedCount}/{note.checklist.length}</span>
               )}
             </h3>
-            <div className="space-y-1">
-              {note.checklist.map(item => {
-                const subCount = note.checklist.filter(s => s.parentId === item.id).length;
-                const drop = dropTarget?.targetId === item.id ? dropTarget.pos : null;
-                return (
-                  <div key={item.id} data-item-id={item.id}
-                    className={`relative rounded ${item.parentId ? "ml-7 md:ml-6" : ""} ${dragItemId === item.id ? "opacity-40" : ""} ${drop === "inside" ? "ring-2 ring-primary bg-primary/10" : ""}`}>
-                    {drop === "before" && <span aria-hidden className="pointer-events-none absolute -top-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
-                    {drop === "after" && <span aria-hidden className="pointer-events-none absolute -bottom-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
-                    {drop === "inside" && <CornerDownRight aria-hidden size={14} className="pointer-events-none absolute -left-5 top-1/2 -translate-y-1/2 text-primary" />}
-                    <PostItChecklistItem item={item} noteId={noteId} mobile={isMobile}
-                      subtaskCount={subCount}
-                      onDragHandle={e => startItemDrag(item.id, e)}
-                      onOpenSheet={() => setSheetTaskId(item.id)} />
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-end gap-1.5 mt-2">
-              <textarea value={newItemText}
-                onChange={e => {
-                  setNewItemText(e.target.value);
-                  e.currentTarget.style.height = "auto";
-                  e.currentTarget.style.height = e.currentTarget.scrollHeight + "px";
-                }}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAddItem(); (e.currentTarget as HTMLTextAreaElement).style.height = "auto"; } }}
-                placeholder="Añadir tarea..." rows={1}
-                className="flex-1 text-base md:text-sm bg-muted rounded px-2 py-2.5 md:py-1.5 outline-none text-foreground placeholder:text-muted-foreground font-body resize-none overflow-hidden leading-snug max-h-40 min-h-11 md:min-h-0" />
-              <button onClick={handleAddItem} aria-label="Añadir tarea" className="rounded bg-primary text-primary-foreground hover:opacity-90 shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1.5 flex items-center justify-center">
-                <Plus size={isMobile ? 20 : 14} />
-              </button>
-              <button
-                onClick={async () => {
-                  const text = newItemText.trim() || "Nueva tarea";
-                  const newItem: ChecklistItem = { id: crypto.randomUUID(), text, completed: false };
-                  const newChecklist = [...note.checklist, newItem];
-                  updateNote(noteId, { checklist: newChecklist });
-                  setNewItemText("");
-                  setSheetTaskId(newItem.id);
-                }}
-                aria-label="Añadir tarea con detalles"
-                title="Añadir con fecha, notas, subtareas"
-                className="rounded bg-muted text-foreground hover:bg-muted/70 shrink-0 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1.5 flex items-center justify-center"
-              >
-                <MoreHorizontal size={isMobile ? 20 : 14} />
-              </button>
-            </div>
+            <NoteChecklist noteId={noteId} mobile={isMobile} onOpenItem={setSheetTaskId} onAddWithDetails={setSheetTaskId} />
           </div>
         ) : (
           <RichTextEditor

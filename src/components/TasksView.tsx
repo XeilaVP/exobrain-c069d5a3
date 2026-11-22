@@ -2,47 +2,23 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, ListChecks, SquareArrowOutUpRight } from "lucide-react";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
-import { ChecklistItem, Note } from "@/types/notes";
-import { prioritizedEntries, itemsOf, isSubtask } from "@/lib/taskLevels";
-import { sortChecklistByCompletion } from "@/lib/checklistOrder";
-import { destinationForEntry, initialExpandedEntries, patchChecklistItem } from "@/lib/taskNavigation";
+import { prioritizedEntries } from "@/lib/taskLevels";
+import { destinationForEntry, initialExpandedEntries } from "@/lib/taskNavigation";
 import TaskMetaControls from "@/components/TaskMetaControls";
-import EditableChecklistText from "@/components/EditableChecklistText";
+import { NoteChecklist, PostItChecklistItem } from "@/components/NotePostIt";
 
 interface TasksViewProps { onOpenNote: (id: string, subtaskId?: string) => void; }
+/** Tasks embebe las mismas listas de las notas añadidas: mismas filas, mismas funciones. */
 const TasksView = ({ onOpenNote }: TasksViewProps) => {
   const { notes, updateNote, setViewMembership } = useNotes();
   const entries = useMemo(() => prioritizedEntries(notes), [notes]);
   const [expanded, setExpanded] = useState<Set<string>>(initialExpandedEntries);
+  const mobile = typeof window !== "undefined" && window.innerWidth < 768;
   const toggle = (id: string) => setExpanded(previous => {
     const next = new Set(previous);
     next.has(id) ? next.delete(id) : next.add(id);
     return next;
   });
-  const patchItem = (note: Note, itemId: string, patch: Partial<ChecklistItem>) => {
-    const next = patchChecklistItem(note.checklist, itemId, { ...patch, updatedAt: new Date().toISOString() });
-    updateNote(note.id, { checklist: patch.completed !== undefined ? sortChecklistByCompletion(next) : next });
-  };
-  const controlsForNote = (note: Note) => <TaskMetaControls
-    dueAt={note.calendarAt}
-    hasTime={note.calendarHasTime}
-    priority={note.priority}
-    onDateChange={(calendarAt, calendarHasTime) => setViewMembership(note.id, { calendarAt, calendarHasTime, inCalendar: !!calendarAt })}
-    onPriorityChange={(priority) => updateNote(note.id, { priority })}
-  />;
-  const controlsForItem = (note: Note, item: ChecklistItem) => <TaskMetaControls
-    dueAt={item.dueAt}
-    hasTime={item.hasTime}
-    priority={item.priority}
-    onDateChange={(dueAt, hasTime) => patchItem(note, item.id, { dueAt, hasTime })}
-    onPriorityChange={(priority) => patchItem(note, item.id, { priority: priority ?? undefined })}
-  />;
-  const row = (note: Note, task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 md:flex-nowrap ${child ? "ml-7" : ""}`}>
-    <input type="checkbox" checked={task.completed} onChange={() => patchItem(note, task.id, { completed: !task.completed })} className="h-4 w-4 accent-primary" />
-    {child && task.style === "bullet" ? <EditableChecklistText text={task.text} completed={task.completed} onSave={text => patchItem(note, task.id, { text })} />
-      : <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 px-0 text-left font-normal" onClick={() => onOpenNote(note.id, task.id)}><span className={`truncate ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.text}</span><SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" /></Button>}
-    {!(child && task.style === "bullet") && <div className="basis-full pl-7 md:basis-auto md:pl-0">{controlsForItem(note, task)}</div>}
-  </div>;
 
   return (
     <section className="h-full overflow-y-auto bg-background px-3 pb-7 pt-16 md:px-8 md:py-7 scrollbar-thin">
@@ -53,24 +29,28 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
             const key = e.kind === "task" ? e.note.id : `${e.note.id}-${e.item.id}`;
             const isOpen = expanded.has(key);
             const destination = destinationForEntry(e);
+            const chevron = <Button variant="ghost" size="icon" className="shrink-0" aria-expanded={isOpen} aria-label={`${isOpen ? "Plegar" : "Desplegar"} ${e.kind === "task" ? e.note.title : e.item.text}`} onClick={() => toggle(key)}>{isOpen ? <ChevronDown /> : <ChevronRight />}</Button>;
             return (
             <article key={key} className="rounded-lg border border-border bg-card shadow-soft">
-              <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 border-b border-border px-3 py-2">
-                <Button variant="ghost" size="icon" aria-expanded={isOpen} aria-label={`${isOpen ? "Plegar" : "Desplegar"} ${e.kind === "task" ? e.note.title : e.item.text}`} onClick={() => toggle(key)}>{isOpen ? <ChevronDown /> : <ChevronRight />}</Button>
-                {e.kind === "subtask" && <input type="checkbox" checked={e.item.completed} onChange={() => patchItem(e.note, e.item.id, { completed: !e.item.completed })} className="col-start-3 row-start-1 mt-3 h-4 w-4 accent-primary" />}
-                <div className={e.kind === "subtask" ? "col-start-2 row-start-1 min-w-0" : "col-span-2 min-w-0"}>
-                  <Button variant="ghost" onClick={() => onOpenNote(destination.noteId, destination.subtaskId)} className="h-auto min-h-9 max-w-full justify-start gap-1 px-1.5 text-left font-display font-semibold hover:text-primary">
-                    {e.kind === "task" && <ListChecks className="h-4 w-4 shrink-0 text-primary" />}
-                    <span className={`truncate ${e.kind === "subtask" && e.item.completed ? "line-through text-muted-foreground" : ""}`}>{e.kind === "task" ? e.note.title : e.item.text}</span>
+              <header className="flex items-center gap-1 border-b border-border px-2 py-1.5">
+                {chevron}
+                {e.kind === "task" ? <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                  <Button variant="ghost" onClick={() => onOpenNote(destination.noteId, destination.subtaskId)} className="h-auto min-h-9 min-w-0 flex-[1_1_auto] justify-start gap-1 whitespace-normal px-1.5 text-left font-display font-semibold hover:text-primary">
+                    <ListChecks className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="break-words">{e.note.title}</span>
                     <SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" />
                   </Button>
-                  {e.kind === "task" ? controlsForNote(e.note) : controlsForItem(e.note, e.item)}
-                </div>
+                  <div className="shrink-0"><TaskMetaControls
+                    dueAt={e.note.calendarAt} hasTime={e.note.calendarHasTime} priority={e.note.priority}
+                    onDateChange={(calendarAt, calendarHasTime) => setViewMembership(e.note.id, { calendarAt, calendarHasTime, inCalendar: !!calendarAt })}
+                    onPriorityChange={(priority) => updateNote(e.note.id, { priority })} /></div>
+                </div> : <div className="min-w-0 flex-1">
+                  <PostItChecklistItem item={e.item} noteId={e.note.id} mobile={mobile} onOpenSheet={() => onOpenNote(e.note.id, e.item.id)} />
+                </div>}
               </header>
-              {isOpen && <div className="divide-y divide-border/70 px-3">
-                {e.kind === "task"
-                  ? e.note.checklist.filter(isSubtask).map(s => <div key={s.id}>{row(e.note, s)}{itemsOf(e.note, s.id).map(c => row(e.note, c, true))}</div>)
-                  : itemsOf(e.note, e.item.id).map(c => row(e.note, c, true))}
+              {isOpen && <div className="px-2 py-2">
+                <NoteChecklist noteId={e.note.id} mobile={mobile} rootId={e.kind === "subtask" ? e.item.id : undefined}
+                  onOpenItem={id => onOpenNote(e.note.id, id)} />
               </div>}
             </article>
           ); })}

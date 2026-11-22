@@ -39,7 +39,7 @@ export const PriorityControl = ({ priority, onChange }: { priority?: Priority | 
         {priority && priorityLabel[priority]}
       </Button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent align="start" className="z-[80]">
+    <DropdownMenuContent align="start" collisionPadding={12} className="z-[80] max-h-[var(--radix-dropdown-menu-content-available-height)] overflow-y-auto">
       <DropdownMenuItem onSelect={() => onChange(null)}><Flag className="mr-2 h-4 w-4 text-muted-foreground" />Sin prioridad</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => onChange("high")}><Flag className="priority-high mr-2 h-4 w-4" />Alta</DropdownMenuItem>
       <DropdownMenuItem onSelect={() => onChange("medium")}><Flag className="priority-medium mr-2 h-4 w-4" />Media</DropdownMenuItem>
@@ -76,7 +76,8 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
           {dueAt && <span className="whitespace-nowrap">{format(new Date(dueAt), hasTime ? "d MMM · HH:mm" : "d MMM", { locale: es })}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="z-[80] w-auto space-y-2 p-2">
+      <PopoverContent align="start" collisionPadding={12} avoidCollisions className="z-[80] flex w-auto max-h-[var(--radix-popover-content-available-height)] flex-col p-2">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
         <Calendar mode="single" selected={day} onSelect={setDay} locale={es} weekStartsOn={1} initialFocus className="p-1 pointer-events-auto" />
         <div className="flex items-center gap-2 px-1">
           <Button type="button" variant={withTime ? "secondary" : "outline"} size="sm" aria-pressed={withTime} aria-label={withTime ? "Quitar hora" : "Añadir hora"} title={withTime ? "Quitar hora" : "Añadir hora"}
@@ -86,7 +87,8 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
           {withTime && <input type="time" aria-label="Hora" value={time} onChange={e => setTime(e.target.value)}
             className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground" />}
         </div>
-        <div className="flex justify-end gap-2 px-1 pb-1">
+        </div>
+        <div className="flex shrink-0 justify-end gap-2 px-1 pb-1 pt-2">
           {dueAt && <Button variant="ghost" size="sm" onClick={() => { onDateChange(null, false); setOpen(false); }}>Quitar</Button>}
           <Button size="sm" onClick={saveDate}>Guardar</Button>
         </div>
@@ -96,7 +98,7 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
 };
 
 const TaskMetaControls = ({ priority, onPriorityChange, ...dateProps }: TaskMetaControlsProps) => (
-  <div className="flex min-w-0 flex-wrap items-center gap-2">
+  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
     <DateControl {...dateProps} />
     <PriorityControl priority={priority} onChange={onPriorityChange} />
   </div>
