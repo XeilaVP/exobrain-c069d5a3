@@ -4,12 +4,13 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Heart } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
-import { motion, Reorder, useDragControls } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import RichTextEditor from "./RichTextEditor";
 import CreateNodeDialog from "./CreateNodeDialog";
 import { Button } from "@/components/ui/button";
 import { plainNoteText } from "@/lib/noteActions";
+import { canDrop, moveChecklistItem, type DropPosition } from "@/lib/checklistDnd";
 import TaskSheet from "./TaskSheet";
 import EmojiPicker from "./EmojiPicker";
 import MoveToDialog from "./MoveToDialog";
@@ -30,6 +31,7 @@ interface PostItChecklistItemProps {
   mobile: boolean;
   onOpenSheet?: () => void;
   subtaskCount?: number;
+  onDragHandle?: (e: React.PointerEvent) => void;
 }
 
 const dueLabel = (iso: string, hasTime?: boolean) => {
@@ -39,8 +41,7 @@ const dueLabel = (iso: string, hasTime?: boolean) => {
   return hasTime ? format(d, "d MMM HH:mm", { locale: es }) : format(d, "d MMM", { locale: es });
 };
 
-const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0 }: PostItChecklistItemProps) => {
-  const dragControls = useDragControls();
+const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0, onDragHandle }: PostItChecklistItemProps) => {
   const { toggleChecklistItem, deleteChecklistItem, updateNote, selectedNote, notes } = useNotes();
   const saveItemText = (text: string) => {
     const containing = notes.find(note => note.id === noteId);
@@ -99,15 +100,11 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
   if (mobile) {
     const overdue = item.dueAt && !item.completed && isPast(new Date(item.dueAt)) && !isToday(new Date(item.dueAt));
     return (
-      <Reorder.Item
-        value={item}
-        id={item.id}
-        dragListener={false}
-        dragControls={dragControls}
+      <div
         className="flex items-center gap-1 bg-background/50 rounded-md px-1 py-1 min-h-14"
       >
         <div
-          onPointerDown={(e) => { e.preventDefault(); dragControls.start(e); }}
+          onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }}
           style={{ touchAction: "none" }}
           aria-label="Arrastrar para reordenar"
           className="shrink-0 w-8 h-11 flex items-center justify-center text-muted-foreground/60 cursor-grab active:cursor-grabbing"
@@ -147,7 +144,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
           )}
         </button>}
         <button aria-label="Borrar item" onClick={() => deleteChecklistItem(noteId, item.id)} className="min-h-11 min-w-9 shrink-0 text-destructive"><Trash2 size={16} /></button>
-      </Reorder.Item>
+      </div>
     );
   }
 
@@ -187,15 +184,11 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
   );
 
   return (
-    <Reorder.Item
-      value={item}
-      id={item.id}
-      dragListener={false}
-      dragControls={dragControls}
-      className="flex items-center gap-1.5 group bg-background/50 rounded px-1.5 py-1"
+    <div
+        className="flex items-center gap-1.5 group bg-background/50 rounded px-1.5 py-1"
     >
       <div
-        onPointerDown={(e) => { e.preventDefault(); dragControls.start(e); }}
+        onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }}
         style={{ touchAction: "none" }}
         aria-label="Arrastrar para reordenar"
         className="shrink-0 flex items-center justify-center text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing"
@@ -204,7 +197,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
       </div>
       {checkbox}{item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : textEl}
       {actions}
-    </Reorder.Item>
+    </div>
   );
 };
 
@@ -246,6 +239,41 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
   const [movedDestination, setMovedDestination] = useState<{ noteId: string; subtaskId: string } | null>(null);
 
   useEffect(() => { setSelectedNoteId(noteId); }, [noteId, setSelectedNoteId]);
+
+  const [dragItemId, setDragItemId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ targetId: string; pos: DropPosition } | null>(null);
+  const startItemDrag = (dragId: string, _e: React.PointerEvent) => {
+    setDragItemId(dragId);
+    let current: { targetId: string; pos: DropPosition } | null = null;
+    const move = (ev: PointerEvent) => {
+      const checklist = notesRef.current.find(n => n.id === noteId)?.checklist ?? [];
+      const row = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest("[data-item-id]") as HTMLElement | null;
+      let next: typeof current = null;
+      if (row) {
+        const targetId = row.dataset.itemId!;
+        const r = row.getBoundingClientRect();
+        const f = (ev.clientY - r.top) / r.height;
+        const target = checklist.find(i => i.id === targetId);
+        let pos: DropPosition = f < 0.3 ? "before" : f > 0.7 ? "after" : (target && !target.parentId ? "inside" : f < 0.5 ? "before" : "after");
+        if (!canDrop(checklist, dragId, targetId, pos) && pos === "inside") pos = f < 0.5 ? "before" : "after";
+        if (canDrop(checklist, dragId, targetId, pos)) next = { targetId, pos };
+      }
+      if (next?.targetId !== current?.targetId || next?.pos !== current?.pos) { current = next; setDropTarget(next); }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const checklist = notesRef.current.find(n => n.id === noteId)?.checklist;
+      if (current && checklist) updateNote(noteId, { checklist: moveChecklistItem(checklist, dragId, current.targetId, current.pos) });
+      setDragItemId(null); setDropTarget(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+  const notesRef = useRef(notes);
+  notesRef.current = notes;
 
   const handleReorder = useCallback((newOrder: any) => {
     if (!note) return;
@@ -505,37 +533,24 @@ const NotePostIt = ({ noteId, position, onClose, presentation = "canvas", onNavi
                 <span className="text-xs md:text-[10px] text-muted-foreground font-body font-normal">{completedCount}/{note.checklist.length}</span>
               )}
             </h3>
-            {isMobile ? (
-              <Reorder.Group
-                axis="y"
-                values={note.checklist.filter(i => !i.parentId)}
-                onReorder={(newTops: ChecklistItem[]) => {
-                  const rebuilt: ChecklistItem[] = [];
-                  newTops.forEach(t => {
-                    rebuilt.push(t);
-                    note.checklist.filter(s => s.parentId === t.id).forEach(s => rebuilt.push(s));
-                  });
-                  updateNote(noteId, { checklist: rebuilt });
-                }}
-                className="space-y-1"
-              >
-                {note.checklist.filter(i => !i.parentId).map((item) => {
-                  const subCount = note.checklist.filter(s => s.parentId === item.id).length;
-                  return (
-                    <PostItChecklistItem key={item.id} item={item} noteId={noteId} mobile
+            <div className="space-y-1">
+              {note.checklist.map(item => {
+                const subCount = note.checklist.filter(s => s.parentId === item.id).length;
+                const drop = dropTarget?.targetId === item.id ? dropTarget.pos : null;
+                return (
+                  <div key={item.id} data-item-id={item.id}
+                    className={`relative rounded ${item.parentId ? "ml-7 md:ml-6" : ""} ${dragItemId === item.id ? "opacity-40" : ""} ${drop === "inside" ? "ring-2 ring-primary bg-primary/10" : ""}`}>
+                    {drop === "before" && <span aria-hidden className="pointer-events-none absolute -top-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
+                    {drop === "after" && <span aria-hidden className="pointer-events-none absolute -bottom-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
+                    {drop === "inside" && <CornerDownRight aria-hidden size={14} className="pointer-events-none absolute -left-5 top-1/2 -translate-y-1/2 text-primary" />}
+                    <PostItChecklistItem item={item} noteId={noteId} mobile={isMobile}
                       subtaskCount={subCount}
+                      onDragHandle={e => startItemDrag(item.id, e)}
                       onOpenSheet={() => setSheetTaskId(item.id)} />
-                  );
-                })}
-              </Reorder.Group>
-            ) : (
-              <Reorder.Group axis="y" values={note.checklist} onReorder={handleReorder} className="space-y-1">
-                {note.checklist.map(item => (
-                  <PostItChecklistItem key={item.id} item={item} noteId={noteId} mobile={false}
-                    onOpenSheet={() => setSheetTaskId(item.id)} />
-                ))}
-              </Reorder.Group>
-            )}
+                  </div>
+                );
+              })}
+            </div>
             <div className="flex items-end gap-1.5 mt-2">
               <textarea value={newItemText}
                 onChange={e => {
