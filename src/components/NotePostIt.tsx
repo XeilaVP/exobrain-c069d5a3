@@ -90,7 +90,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
     const containing = notes.find(note => note.id === noteId);
     if (containing) updateNote(noteId, { checklist: containing.checklist.map(i => i.id === item.id ? { ...i, ...patch } : i) });
   };
-  const isRootTask = !item.parentId && item.style !== "bullet";
+  const isRootTask = item.style !== "bullet";
   const metaEditor = isRootTask && metaOpen ? (
     <div className="basis-full pl-8 pt-1" data-no-pan>
       <TaskMetaControls dueAt={item.dueAt} hasTime={item.hasTime} priority={item.priority}
@@ -98,7 +98,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
         onPriorityChange={priority => patchSelf({ priority: priority ?? undefined })} />
     </div>
   ) : null;
-  const openButton = !item.parentId ? (
+  const openButton = isRootTask ? (
     <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
       className="shrink-0 min-h-9 min-w-9 flex items-center justify-center text-muted-foreground hover:text-foreground"><SquareArrowOutUpRight size={14} /></button>
   ) : null;
@@ -155,7 +155,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
             </button>
           )}
         </div>
-        {item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : <button
+        {item.parentId ? <div className="flex-1 min-w-0" onClick={() => isRootTask && setMetaOpen(true)}><EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /></div> : <button
           onClick={() => isRootTask ? setMetaOpen(o => !o) : onOpenSheet?.()}
           className="flex-1 min-w-0 text-left py-1.5 basis-[80%]"
         >
@@ -206,7 +206,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
 
   const actions = (
     <>
-      {!item.parentId && <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
+      {isRootTask && <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
         className="opacity-60 hover:opacity-100 text-muted-foreground shrink-0"><SquareArrowOutUpRight size={14} /></button>}
       <button onClick={() => { navigator.clipboard.writeText(item.text); toast.success("Copiado"); }}
         className="opacity-0 group-hover:opacity-50 text-muted-foreground shrink-0"><Copy size={12} /></button>
