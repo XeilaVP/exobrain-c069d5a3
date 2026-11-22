@@ -1,7 +1,7 @@
 import { toggleAndSort } from "@/lib/checklistOrder";
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, Move, Palette, Heart } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, SquareArrowOutUpRight, Move, Palette, Heart } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion } from "framer-motion";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { plainNoteText } from "@/lib/noteActions";
 import { canDrop, moveChecklistItem, type DropPosition } from "@/lib/checklistDnd";
 import TaskSheet from "./TaskSheet";
+import TaskMetaControls from "./TaskMetaControls";
 import EmojiPicker from "./EmojiPicker";
 import MoveToDialog from "./MoveToDialog";
 import ColorPicker from "./ColorPicker";
@@ -73,6 +74,34 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
   };
 
   const startEdit = () => { setEditText(item.text); setIsEditing(true); };
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [metaOpen, setMetaOpen] = useState(false);
+  useEffect(() => {
+    if (!metaOpen) return;
+    const close = (e: PointerEvent) => {
+      const t = e.target as HTMLElement;
+      if (rowRef.current?.contains(t) || t.closest("[data-radix-popper-content-wrapper]")) return;
+      setMetaOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [metaOpen]);
+  const patchSelf = (patch: Partial<ChecklistItem>) => {
+    const containing = notes.find(note => note.id === noteId);
+    if (containing) updateNote(noteId, { checklist: containing.checklist.map(i => i.id === item.id ? { ...i, ...patch } : i) });
+  };
+  const isRootTask = !item.parentId && item.style !== "bullet";
+  const metaEditor = isRootTask && metaOpen ? (
+    <div className="basis-full pl-8 pt-1" data-no-pan>
+      <TaskMetaControls dueAt={item.dueAt} hasTime={item.hasTime} priority={item.priority}
+        onDateChange={(dueAt, hasTime) => patchSelf({ dueAt, hasTime })}
+        onPriorityChange={priority => patchSelf({ priority: priority ?? undefined })} />
+    </div>
+  ) : null;
+  const openButton = !item.parentId ? (
+    <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
+      className="shrink-0 min-h-9 min-w-9 flex items-center justify-center text-muted-foreground hover:text-foreground"><SquareArrowOutUpRight size={14} /></button>
+  ) : null;
 
   const isBullet = item.style === "bullet";
 
@@ -101,7 +130,8 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
     const overdue = item.dueAt && !item.completed && isPast(new Date(item.dueAt)) && !isToday(new Date(item.dueAt));
     return (
       <div
-        className="flex items-center gap-1 bg-background/50 rounded-md px-1 py-1 min-h-14"
+        ref={rowRef}
+        className="flex flex-wrap items-center gap-1 bg-background/50 rounded-md px-1 py-1 min-h-14"
       >
         <div
           onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }}
@@ -126,7 +156,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
           )}
         </div>
         {item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : <button
-          onClick={() => onOpenSheet?.()}
+          onClick={() => isRootTask ? setMetaOpen(o => !o) : onOpenSheet?.()}
           className="flex-1 min-w-0 text-left py-1.5 basis-[80%]"
         >
           <span className={`block text-[15px] font-body leading-snug break-words ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>
@@ -143,7 +173,9 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
             </span>
           )}
         </button>}
+        {openButton}
         <button aria-label="Borrar item" onClick={() => deleteChecklistItem(noteId, item.id)} className="min-h-11 min-w-9 shrink-0 text-destructive"><Trash2 size={16} /></button>
+        {metaEditor}
       </div>
     );
   }
@@ -165,7 +197,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
         if (Math.hypot(dx, dy) > 5) draggedRef.current = true;
       }}
       onPointerUp={() => {
-        if (!draggedRef.current) { startEdit(); }
+        if (!draggedRef.current) { startEdit(); if (isRootTask) setMetaOpen(true); }
         dragStartRef.current = null;
       }}
       className={`flex-1 text-sm font-body select-none ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}
@@ -174,8 +206,8 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
 
   const actions = (
     <>
-      <button onClick={() => onOpenSheet?.()} aria-label="Detalles"
-        className="opacity-0 group-hover:opacity-60 text-muted-foreground shrink-0"><MoreHorizontal size={14} /></button>
+      {!item.parentId && <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
+        className="opacity-60 hover:opacity-100 text-muted-foreground shrink-0"><SquareArrowOutUpRight size={14} /></button>}
       <button onClick={() => { navigator.clipboard.writeText(item.text); toast.success("Copiado"); }}
         className="opacity-0 group-hover:opacity-50 text-muted-foreground shrink-0"><Copy size={12} /></button>
       <Trash2 size={12} className="opacity-0 group-hover:opacity-50 text-destructive cursor-pointer shrink-0"
@@ -184,8 +216,8 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
   );
 
   return (
-    <div
-        className="flex items-center gap-1.5 group bg-background/50 rounded px-1.5 py-1"
+    <div ref={rowRef}
+        className="flex flex-wrap items-center gap-1.5 group bg-background/50 rounded px-1.5 py-1"
     >
       <div
         onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }}
@@ -197,6 +229,7 @@ const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount =
       </div>
       {checkbox}{item.parentId ? <EditableChecklistText text={item.text} completed={item.completed} onSave={saveItemText} /> : textEl}
       {actions}
+      {metaEditor}
     </div>
   );
 };

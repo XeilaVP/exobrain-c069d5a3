@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays, ChevronDown, Flag } from "lucide-react";
+import { CalendarDays, ChevronDown, Clock, Flag } from "lucide-react";
 import type { ChecklistItem } from "@/types/notes";
 import { dateInputToISO } from "@/lib/taskMetadata";
 import { Button } from "@/components/ui/button";
@@ -86,14 +86,14 @@ export const DateControl = ({ dueAt, hasTime, onDateChange }: Pick<TaskMetaContr
             onChange={(event) => setValue(event.target.value)}
             className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground"
           />
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={withTime} onChange={(event) => {
-              const nextWithTime = event.target.checked;
+          <Button type="button" variant={withTime ? "secondary" : "outline"} size="sm" aria-pressed={withTime} aria-label={withTime ? "Quitar hora" : "Añadir hora"}
+            onClick={() => {
+              const nextWithTime = !withTime;
               setWithTime(nextWithTime);
               setValue(previous => nextWithTime && previous.length === 10 ? `${previous}T09:00` : nextWithTime ? previous : previous.slice(0, 10));
-            }} className="accent-primary" />
-            Con hora
-          </label>
+            }} className="h-9 gap-2 px-2.5 text-xs font-normal">
+            <Clock className="h-4 w-4" />{withTime ? "Quitar hora" : "Añadir hora"}
+          </Button>
           <div className="flex justify-end gap-2">
             {dueAt && <Button variant="ghost" size="sm" onClick={() => { onDateChange(null, false); setOpen(false); }}>Quitar</Button>}
             <Button size="sm" onClick={saveDate}>Guardar</Button>
