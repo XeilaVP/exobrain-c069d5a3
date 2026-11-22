@@ -15,7 +15,7 @@
 - Tasks deja de tener su propia versión de las filas. Muestra dentro las mismas notas añadidas a Tasks, con el mismo comportamiento y las mismas funciones que al abrir la nota: pulsar el nombre, «ir a», fecha, prioridad, arrastrar, sangrado de subtareas y papelera.
 - Siempre: al marcar como completada, la tarea pasa al final de la lista, tanto en Tasks como en la nota.
 - Pulsar el nombre muestra la fecha y la prioridad, y permite editar el texto. La flecha «ir a» abre la tarea.
-- Subtareas e items de checklist se tratan igual (pendiente de tu respuesta sobre si los items también llevan fecha y prioridad).
+- Subtareas e items de checklist son lo mismo: todos tienen fecha, hora, prioridad, «ir a», edición del texto al pulsar y paso al final al completarse.
 
 ## 4. Colocación
 - La fecha y la prioridad van junto al nombre siempre que quepan. Si fueran a tapar el nombre, bajan a la línea siguiente. El nombre se ve siempre.
