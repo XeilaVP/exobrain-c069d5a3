@@ -37,17 +37,17 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
     onDateChange={(dueAt, hasTime) => patchItem(note, item.id, { dueAt, hasTime })}
     onPriorityChange={(priority) => patchItem(note, item.id, { priority: priority ?? undefined })}
   />;
-  const row = (note: Note, task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-10 items-center gap-3 py-1.5 ${child ? "ml-7" : ""}`}>
+  const row = (note: Note, task: ChecklistItem, child = false) => <div key={task.id} className={`flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 py-1.5 md:flex-nowrap ${child ? "ml-7" : ""}`}>
     <input type="checkbox" checked={task.completed} onChange={() => patchItem(note, task.id, { completed: !task.completed })} className="h-4 w-4 accent-primary" />
     {child ? <EditableChecklistText text={task.text} completed={task.completed} onSave={text => patchItem(note, task.id, { text })} />
       : <Button variant="ghost" className="h-auto min-w-0 flex-1 justify-start gap-1 px-0 text-left font-normal" onClick={() => onOpenNote(note.id, task.id)}><span className={`truncate ${task.completed ? "line-through text-muted-foreground" : ""}`}>{task.text}</span><SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" /></Button>}
-    {!child && controlsForItem(note, task)}
+    {!child && <div className="basis-full pl-7 md:basis-auto md:pl-0">{controlsForItem(note, task)}</div>}
   </div>;
 
   return (
     <section className="h-full overflow-y-auto bg-background px-3 pb-7 pt-16 md:px-8 md:py-7 scrollbar-thin">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Tareas y subtareas con fecha o prioridad</p></div><span className="text-sm text-muted-foreground">{entries.length} prioritarias</span></div>
+        <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Notas que has añadido a Tasks</p></div><span className="text-sm text-muted-foreground">{entries.length} tareas</span></div>
         <div className="space-y-3">
           {entries.map(e => {
             const key = e.kind === "task" ? e.note.id : `${e.note.id}-${e.item.id}`;
@@ -74,7 +74,7 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
               </div>}
             </article>
           ); })}
-          {entries.length === 0 && <div className="py-24 text-center text-muted-foreground"><ListChecks className="mx-auto mb-3 h-8 w-8" /><p>No hay tareas ni subtareas con fecha o prioridad.</p></div>}
+          {entries.length === 0 && <div className="py-24 text-center text-muted-foreground"><ListChecks className="mx-auto mb-3 h-8 w-8" /><p>Aún no hay tareas. Abre una nota y pulsa «Tasks».</p></div>}
         </div>
       </div>
     </section>

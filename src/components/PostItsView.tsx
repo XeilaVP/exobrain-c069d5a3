@@ -68,13 +68,13 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
   const filtered = branchId !== "all" || sortBy !== "updated";
 
   return (
-    <section className="h-full overflow-y-auto bg-background px-8 py-7 scrollbar-thin">
+    <section className="h-full overflow-y-auto bg-background px-3 pb-7 pt-16 md:px-8 md:py-7 scrollbar-thin">
       <div className="mx-auto max-w-7xl">
         <div className="mb-5"><h2 className="text-3xl font-semibold">Post-its</h2><p className="mt-1 text-sm text-muted-foreground">Las notas que has añadido a Post-its</p></div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="updated">Actualización reciente</SelectItem>
               <SelectItem value="created">Creación</SelectItem>
@@ -85,7 +85,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
           </Select>
 
           <Select value={branchId} onValueChange={v => { setBranchId(v); setSubBranchId("all"); }}>
-            <SelectTrigger className="w-56"><SelectValue placeholder="Todas las ramas" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Todas las ramas" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las ramas</SelectItem>
               {roots.map(r => <SelectItem key={r.id} value={r.id}>{r.icon ? `${r.icon} ` : ""}{r.title}</SelectItem>)}
@@ -94,7 +94,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
 
           {subBranches.length > 0 && (
             <Select value={subBranchId} onValueChange={setSubBranchId}>
-              <SelectTrigger className="w-56"><SelectValue placeholder="Toda la rama" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-56"><SelectValue placeholder="Toda la rama" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Toda la rama</SelectItem>
                 {subBranches.map(s => <SelectItem key={s.id} value={s.id}>{s.icon ? `${s.icon} ` : ""}{s.title}</SelectItem>)}
@@ -106,7 +106,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
           <span className="text-sm text-muted-foreground">{visible.length} notas</span>
         </div>
 
-        <div className="columns-2 gap-4 xl:columns-3 2xl:columns-4">
+        <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
           {visible.map(note => <article key={note.id} className="mb-4 block w-full break-inside-avoid rounded-lg border border-border bg-card p-4 text-left shadow-soft transition-transform hover:-translate-y-0.5" style={{ borderTopColor: note.color ? `hsl(${note.color})` : undefined, borderTopWidth: 4 }}>
             <Button variant="ghost" onClick={() => setPreviewId(note.id)} className="mb-3 flex h-auto w-full items-center justify-start gap-2 px-0 hover:bg-transparent"><span>{note.icon || (note.noteType === "checklist" ? "☑" : "•")}</span><h3 className="min-w-0 flex-1 truncate text-left font-display text-lg font-semibold">{note.title}</h3>{note.noteType === "checklist" && <ListChecks className="h-4 w-4 text-muted-foreground" />}</Button>
             <div role="button" tabIndex={0} onClick={() => setPreviewId(note.id)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPreviewId(note.id); } }}><NotePreview note={note} /></div>
