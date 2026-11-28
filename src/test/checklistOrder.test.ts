@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toggleAndSort } from "@/lib/checklistOrder";
+import { toggleAndSort, sortChecklistByCompletion } from "@/lib/checklistOrder";
 
 const base = [
   { id: "a", text: "a", completed: false },
@@ -19,5 +19,16 @@ describe("checklist order", () => {
   it("subtarea marcada baja dentro de su madre", () => {
     const items = [...base.slice(0, 2), { id: "a2", text: "a2", completed: false, parentId: "a" }, ...base.slice(2)];
     expect(toggleAndSort(items, "a1").map(i => i.id)).toEqual(["a", "a2", "a1", "b", "c"]);
+  });
+});
+
+describe("new items go before completed ones", () => {
+  it("places an appended pending item ahead of completed siblings", () => {
+    const items = [
+      { id: "a", text: "a", completed: false },
+      { id: "b", text: "b", completed: true },
+      { id: "new", text: "new", completed: false },
+    ];
+    expect(sortChecklistByCompletion(items).map(i => i.id)).toEqual(["a", "new", "b"]);
   });
 });

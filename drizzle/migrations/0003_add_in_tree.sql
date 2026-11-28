@@ -1,0 +1,1 @@
+ALTER TABLE public.notes ADD COLUMN IF NOT EXISTS in_tree boolean NOT NULL DEFAULT true;

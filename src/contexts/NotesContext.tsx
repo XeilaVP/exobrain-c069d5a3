@@ -1,4 +1,4 @@
-import { toggleAndSort } from "@/lib/checklistOrder";
+import { toggleAndSort, sortChecklistByCompletion } from "@/lib/checklistOrder";
 import { duplicateNoteData } from "@/lib/noteActions";
 import { subtaskTransferBundle } from "@/lib/subtaskTransfer";
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
@@ -41,7 +41,7 @@ export interface NoteVersion {
   createdAt: string;
 }
 
-export type ViewMembershipPatch = Partial<Pick<Note, "inTasks" | "inPostits" | "inCalendar" | "calendarAt" | "calendarHasTime">>;
+export type ViewMembershipPatch = Partial<Pick<Note, "inTree" | "inTasks" | "inPostits" | "inCalendar" | "calendarAt" | "calendarHasTime">>;
 
 interface NotesContextType {
   setViewMembership: (id: string, patch: ViewMembershipPatch) => Promise<void>;
@@ -54,7 +54,7 @@ interface NotesContextType {
   setActiveView: (v: "notes" | "graph") => void;
   setSelectedCategoryId: (id: string | null) => void;
   setSelectedNoteId: (id: string | null) => void;
-  addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null, pos?: { x: number; y: number } | null) => Promise<Note | null>;
+  addNote: (categoryId: string | null, parentNoteId?: string | null, noteType?: NoteType, color?: string | null, pos?: { x: number; y: number } | null, views?: ViewMembershipPatch) => Promise<Note | null>;
   duplicateNote: (noteId: string) => Promise<Note | null>;
   moveNote: (noteId: string, newParentId: string | null) => Promise<boolean>;
   moveSubtask: (sourceId: string, targetId: string, itemId: string) => Promise<boolean>;
@@ -125,6 +125,7 @@ const dbToNote = (row: any): Note => ({
   isCollapsed: row.is_collapsed ?? true,
   icon: row.icon ?? null,
   isFavorite: row.is_favorite ?? false,
+  inTree: row.in_tree ?? true,
   inTasks: row.in_tasks ?? false,
   inPostits: row.in_postits ?? false,
   inCalendar: row.in_calendar ?? false,
@@ -232,7 +233,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try { await next; } finally { if (saves.current[id] === next) delete saves.current[id]; }
   }, []);
 
-  const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null, pos?: { x: number; y: number } | null) => {
+  const addNote = useCallback(async (categoryId: string | null, parentNoteId?: string | null, noteType: NoteType = "text", color?: string | null, pos?: { x: number; y: number } | null, views?: ViewMembershipPatch) => {
     if (!user) return null;
     // Child notes inherit parent's category and color
     let catId = categoryId;
@@ -256,6 +257,12 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       note_type: noteType,
       pos_x: pos ? pos.x : null,
       pos_y: pos ? pos.y : null,
+      in_tree: views?.inTree ?? true,
+      in_tasks: views?.inTasks ?? false,
+      in_postits: views?.inPostits ?? false,
+      in_calendar: views?.inCalendar ?? false,
+      calendar_at: views?.calendarAt ?? null,
+      calendar_has_time: views?.calendarHasTime ?? false,
     }).select().single();
     if (error) { toast.error("Error al crear nota"); return null; }
     const note = dbToNote(data);
@@ -328,6 +335,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const setViewMembership = useCallback(async (id: string, patch: ViewMembershipPatch) => {
     setNotes(prev => prev.map(n => n.id === id ? { ...n, ...patch } : n));
     const db: any = {};
+    if (patch.inTree !== undefined) db.in_tree = patch.inTree;
     if (patch.inTasks !== undefined) db.in_tasks = patch.inTasks;
     if (patch.inPostits !== undefined) db.in_postits = patch.inPostits;
     if (patch.inCalendar !== undefined) db.in_calendar = patch.inCalendar;
@@ -427,7 +435,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotes(prev => {
       const target = prev.find(n => n.id === noteId);
       if (!target) return prev;
-      const newChecklist = [...target.checklist, { id: crypto.randomUUID(), text, completed: false }];
+      const newChecklist = sortChecklistByCompletion([...target.checklist, { id: crypto.randomUUID(), text, completed: false }]);
       persistChecklist(noteId, newChecklist);
       return prev.map(n => n.id === noteId ? { ...n, checklist: newChecklist, updatedAt: new Date().toISOString() } : n);
     });

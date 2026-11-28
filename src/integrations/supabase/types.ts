@@ -257,6 +257,7 @@ export type Database = {
           in_calendar: boolean
           in_postits: boolean
           in_tasks: boolean
+          in_tree: boolean
           is_collapsed: boolean
           is_favorite: boolean
           linked_note_ids: string[]
@@ -284,6 +285,7 @@ export type Database = {
           in_calendar?: boolean
           in_postits?: boolean
           in_tasks?: boolean
+          in_tree?: boolean
           is_collapsed?: boolean
           is_favorite?: boolean
           linked_note_ids?: string[]
@@ -311,6 +313,7 @@ export type Database = {
           in_calendar?: boolean
           in_postits?: boolean
           in_tasks?: boolean
+          in_tree?: boolean
           is_collapsed?: boolean
           is_favorite?: boolean
           linked_note_ids?: string[]
@@ -440,6 +443,7 @@ export type Database = {
           in_calendar: boolean
           in_postits: boolean
           in_tasks: boolean
+          in_tree: boolean
           is_collapsed: boolean
           is_favorite: boolean
           linked_note_ids: string[]
@@ -476,6 +480,7 @@ export type Database = {
           in_calendar: boolean
           in_postits: boolean
           in_tasks: boolean
+          in_tree: boolean
           is_collapsed: boolean
           is_favorite: boolean
           linked_note_ids: string[]
@@ -512,6 +517,7 @@ export type Database = {
           in_calendar: boolean
           in_postits: boolean
           in_tasks: boolean
+          in_tree: boolean
           is_collapsed: boolean
           is_favorite: boolean
           linked_note_ids: string[]
@@ -548,6 +554,7 @@ export type Database = {
           in_calendar: boolean
           in_postits: boolean
           in_tasks: boolean
+          in_tree: boolean
           is_collapsed: boolean
           is_favorite: boolean
           linked_note_ids: string[]

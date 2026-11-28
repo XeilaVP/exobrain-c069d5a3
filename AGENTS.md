@@ -12,3 +12,4 @@
 - Reuse TaskDescription for checklist-note content and subtask notes, retaining the rich-text editor for existing HTML; this preserves descriptions without parallel fields.
 - Validate transfer bundles with subtaskTransfer and transfer through move_checklist_subtask after draining serialized per-note saves, with checklist comparison and user ownership checks; this prevents partial moves and stale writes restoring the source.- Render every checklist row (tasks, subtasks, items) through NotePostIt's PostItChecklistItem/NoteChecklist, and have TasksView embed them; this keeps one behavior across note and Tasks.
 - Size content windows (notes, task sheets) with useResizableWindow on desktop only; dialogs and menus stay fixed-size.
+- Gate graph visibility with notes.in_tree (default true), filtering notes and their descendants in GraphViewV2; notes created from Tasks/Post-its/Planner start outside the tree so views stay independent.

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, ListChecks, Clock, Flag } from "lucide-react";
+import { ChevronDown, ChevronRight, ListChecks, Clock, Flag, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useNotes } from "@/contexts/NotesContext";
@@ -11,7 +11,11 @@ import { NoteChecklist, PostItChecklistItem } from "@/components/NotePostIt";
 interface TasksViewProps { onOpenNote: (id: string, subtaskId?: string) => void; }
 /** Tasks embebe las mismas listas de las notas añadidas: mismas filas, mismas funciones. */
 const TasksView = ({ onOpenNote }: TasksViewProps) => {
-  const { notes } = useNotes();
+  const { notes, addNote } = useNotes();
+  const createTask = async () => {
+    const created = await addNote(null, null, "checklist", null, null, { inTree: false, inTasks: true });
+    if (created) onOpenNote(created.id);
+  };
   const entries = useMemo(() => prioritizedEntries(notes), [notes]);
   const [expanded, setExpanded] = useState<Set<string>>(initialExpandedEntries);
   const mobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -24,7 +28,7 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
   return (
     <section className="h-full overflow-y-auto bg-background px-3 pb-7 pt-16 md:px-8 md:py-7 scrollbar-thin">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Notas que has añadido a Tasks</p></div><span className="text-sm text-muted-foreground">{entries.length} tareas</span></div>
+        <div className="mb-7 flex items-end justify-between"><div><h2 className="text-3xl font-semibold">Tasks</h2><p className="mt-1 text-sm text-muted-foreground">Notas que has añadido a Tasks</p></div><div className="flex items-center gap-3"><span className="text-sm text-muted-foreground">{entries.length} tareas</span><Button size="sm" onClick={createTask}><Plus /> Nueva tarea</Button></div></div>
         <div className="space-y-3">
           {entries.map(e => {
             const key = e.kind === "task" ? e.note.id : `${e.note.id}-${e.item.id}`;

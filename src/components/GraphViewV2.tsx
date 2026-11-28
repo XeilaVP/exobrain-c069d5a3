@@ -94,7 +94,7 @@ const svgSafeId = (value: string) => value.replace(/[^a-zA-Z0-9_-]/g, "-");
 
 const GraphView = ({ favoritesOnly = false, onToggleFavorites }: { favoritesOnly?: boolean; onToggleFavorites?: () => void }) => {
   const {
-    notes,
+    notes: allNotes,
     categories,
     addNote,
     deleteNote,
@@ -114,6 +114,21 @@ const GraphView = ({ favoritesOnly = false, onToggleFavorites }: { favoritesOnly
     setOnboarded,
     loading,
   } = useNotes();
+  // Solo las notas que pertenecen al Árbol (y cuyas madres también) se dibujan en el mapa.
+  const notes = useMemo(() => {
+    const byId = new Map(allNotes.map(n => [n.id, n]));
+    const inTree = (n: typeof allNotes[number]): boolean => {
+      let current: typeof n | undefined = n;
+      const seen = new Set<string>();
+      while (current && !seen.has(current.id)) {
+        if (current.inTree === false) return false;
+        seen.add(current.id);
+        current = current.parentNoteId ? byId.get(current.parentNoteId) : undefined;
+      }
+      return true;
+    };
+    return allNotes.filter(inTree);
+  }, [allNotes]);
 
   const { theme, toggleTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);

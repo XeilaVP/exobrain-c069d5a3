@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ExternalLink, ListChecks, X } from "lucide-react";
+import { ExternalLink, ListChecks, Plus, X } from "lucide-react";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,7 +26,11 @@ const NotePreview = ({ note }: { note: Note }) => note.noteType === "checklist" 
 ) : <p className="line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{plainText(note.content) || "Sin contenido"}</p>;
 
 const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
-  const { notes: allNotes, setViewMembership, updateNote } = useNotes();
+  const { notes: allNotes, setViewMembership, updateNote, addNote } = useNotes();
+  const createPostIt = async () => {
+    const created = await addNote(null, null, "text", null, null, { inTree: false, inPostits: true });
+    if (created) onOpenNote(created.id);
+  };
   const notes = useMemo(() => allNotes.filter(n => n.inPostits), [allNotes]);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("updated");
@@ -70,7 +74,7 @@ const PostItsView = ({ onOpenNote }: PostItsViewProps) => {
   return (
     <section className="h-full overflow-y-auto bg-background px-3 pb-7 pt-16 md:px-8 md:py-7 scrollbar-thin">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-5"><h2 className="text-3xl font-semibold">Post-its</h2><p className="mt-1 text-sm text-muted-foreground">Las notas que has añadido a Post-its</p></div>
+        <div className="mb-5 flex items-end justify-between gap-3"><div><h2 className="text-3xl font-semibold">Post-its</h2><p className="mt-1 text-sm text-muted-foreground">Las notas que has añadido a Post-its</p></div><Button size="sm" onClick={createPostIt}><Plus /> Nuevo post-it</Button></div>
 
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>

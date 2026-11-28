@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { addDays, addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek, subMonths, subWeeks } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Flag, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, Flag, Plus, X } from "lucide-react";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { ChecklistItem, Note } from "@/types/notes";
@@ -13,7 +13,12 @@ const NOTE_ENTRY = NOTE_CALENDAR_ENTRY;
 type CalendarTask = { note: Note; item: ChecklistItem };
 
 const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
-  const { notes, updateNote, setViewMembership } = useNotes();
+  const { notes, updateNote, setViewMembership, addNote } = useNotes();
+  const createEntry = async (day: Date) => {
+    const at = new Date(day); at.setHours(12, 0, 0, 0);
+    const created = await addNote(null, null, "text", null, null, { inTree: false, inCalendar: true, calendarAt: at.toISOString(), calendarHasTime: false });
+    if (created) onOpenNote(created.id);
+  };
   const [mode, setMode] = useState<"month" | "week">("month");
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState<CalendarTask | null>(null);
@@ -33,6 +38,7 @@ const PlannerView = ({ onOpenNote }: PlannerViewProps) => {
       <div className="mx-auto max-w-7xl">
         <header className="mb-5 flex flex-wrap items-center gap-3">
           <div className="mr-auto"><h2 className="text-3xl font-semibold">Planificador</h2></div>
+          <Button onClick={() => createEntry(isSameMonth(new Date(), cursor) ? new Date() : cursor)}><Plus /> Nueva</Button>
           <Button variant="outline" onClick={() => setCursor(new Date())}>Hoy</Button>
           <div className="flex rounded-md border border-border bg-card p-0.5"><Button variant={mode === "month" ? "secondary" : "ghost"} size="sm" onClick={() => setMode("month")}>Mes</Button><Button variant={mode === "week" ? "secondary" : "ghost"} size="sm" onClick={() => setMode("week")}>Semana</Button></div>
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label="Anterior"><ChevronLeft /></Button><Button variant="ghost" size="icon" onClick={() => navigate(1)} aria-label="Siguiente"><ChevronRight /></Button>

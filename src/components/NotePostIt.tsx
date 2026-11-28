@@ -1,4 +1,4 @@
-import { toggleAndSort } from "@/lib/checklistOrder";
+import { toggleAndSort, sortChecklistByCompletion } from "@/lib/checklistOrder";
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, SquareArrowOutUpRight, Move, Palette, Heart, Clock, Flag } from "lucide-react";
@@ -34,7 +34,7 @@ interface PostItChecklistItemProps {
   onOpenSheet?: () => void;
   subtaskCount?: number;
   onDragHandle?: (e: React.PointerEvent) => void;
-  /** Fila resumida (Tasks): sin arrastre ni papelera; fecha como texto, prioridad solo icono. */
+  /** Fila resumida (Tasks): conserva arrastre y papelera; fecha como texto, prioridad solo icono, el nombre abre el detalle. */
   compact?: boolean;
 }
 
@@ -108,26 +108,12 @@ export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtask
     </span>
   );
 
-  if (compact) return (
-    <div data-task-row className="flex items-start gap-x-1.5 px-1 py-1">
-      <button onClick={() => toggleChecklistItem(noteId, item.id)} aria-label={item.completed ? "Marcar como pendiente" : "Marcar como completada"}
-        className={`text-primary shrink-0 flex items-center justify-center ${hit}`}>
-        {item.completed ? <CheckSquare size={icon} /> : <Square size={icon} />}
-      </button>
-      <button onClick={() => onOpenSheet?.()} className={`min-w-0 flex-1 text-left py-1 ${mobile ? "text-[15px]" : "text-sm"}`}>
-        <span className={`block break-words leading-snug ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{item.text || "Sin título"}</span>
-        {item.dueAt && <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><Clock size={13} />{dueLabel(item.dueAt, item.hasTime)}</span>}
-      </button>
-      {item.priority && <Flag aria-label="Prioridad" size={16} className={`priority-${item.priority} mt-2 shrink-0`} />}
-    </div>
-  );
-
   return (
     <div ref={rowRef} data-task-row className="group flex items-start gap-x-1.5 rounded bg-background/50 px-1 py-1">
-      <div onPointerDown={(e) => { e.preventDefault(); onDragHandle?.(e); }} style={{ touchAction: "none" }} aria-label="Arrastrar para reordenar"
+      {onDragHandle && <div onPointerDown={(e) => { e.preventDefault(); onDragHandle(e); }} style={{ touchAction: "none" }} aria-label="Arrastrar para reordenar"
         className={`shrink-0 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing ${mobile ? "h-10 w-6" : "h-7 w-4"}`}>
         <GripVertical size={mobile ? 18 : 14} />
-      </div>
+      </div>}
       {isBullet ? (
         <button onClick={toggleStyle} aria-label="Cambiar a tarea" className={`text-primary shrink-0 flex items-center justify-center ${hit}`}><Dot size={mobile ? 24 : 20} /></button>
       ) : (
@@ -139,16 +125,23 @@ export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtask
       )}
       {/* El nombre ocupa el espacio libre y nunca baja de ~12rem: si no cabe, los controles saltan de línea */}
       <div className={`flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 ${mobile ? "min-h-10" : "min-h-7"}`}>
-      <div className="min-w-[5rem] flex-[1_1_auto]">{nameEl}</div>
-      {showMeta && <div className="flex shrink-0 items-center gap-1.5" data-no-pan>
+      {compact ? <button onClick={() => onOpenSheet?.()} className={`min-w-0 flex-1 text-left py-0.5 ${mobile ? "text-[15px]" : "text-sm"}`}>
+        <span className={`break-words leading-snug ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{item.text || "Sin título"}</span>
+        {subtaskCount > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[11px] text-muted-foreground"><CornerDownRight size={11} />{subtaskCount}</span>}
+        {(item.dueAt || item.priority) && <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+          {item.dueAt && <><Clock size={13} />{dueLabel(item.dueAt, item.hasTime)}</>}
+          {item.priority && <Flag aria-label="Prioridad" size={14} className={`priority-${item.priority} shrink-0`} />}
+        </span>}
+      </button> : <div className="min-w-[5rem] flex-[1_1_auto]">{nameEl}</div>}
+      {!compact && showMeta && <div className="flex shrink-0 items-center gap-1.5" data-no-pan>
         <TaskMetaControls dueAt={item.dueAt} hasTime={item.hasTime} priority={item.priority}
           onDateChange={(dueAt, hasTime) => patchSelf({ dueAt, hasTime })}
           onPriorityChange={priority => patchSelf({ priority: priority ?? undefined })} />
       </div>}
       </div>
       <div className="flex shrink-0 items-center">
-        <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
-          className={`flex items-center justify-center text-muted-foreground hover:text-foreground ${hit}`}><SquareArrowOutUpRight size={14} /></button>
+        {!compact && <button onClick={() => onOpenSheet?.()} aria-label="Abrir tarea" title="Abrir"
+          className={`flex items-center justify-center text-muted-foreground hover:text-foreground ${hit}`}><SquareArrowOutUpRight size={14} /></button>}
         {!mobile && <button onClick={() => { navigator.clipboard.writeText(item.text); toast.success("Copiado"); }} aria-label="Copiar"
           className={`flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-60 ${hit}`}><Copy size={12} /></button>}
         <button aria-label="Borrar item" onClick={() => deleteChecklistItem(noteId, item.id)}
@@ -204,7 +197,7 @@ export const NoteChecklist = ({ noteId, mobile, onOpenItem, onAddWithDetails, ro
   const handleAddItem = () => {
     const text = newItemText.trim();
     if (!text) return;
-    if (rootId) updateNote(noteId, { checklist: [...note.checklist, { id: crypto.randomUUID(), text, completed: false, parentId: rootId }] });
+    if (rootId) updateNote(noteId, { checklist: sortChecklistByCompletion([...note.checklist, { id: crypto.randomUUID(), text, completed: false, parentId: rootId }]) });
     else addChecklistItem(noteId, text);
     setNewItemText("");
   };
@@ -246,7 +239,7 @@ export const NoteChecklist = ({ noteId, mobile, onOpenItem, onAddWithDetails, ro
                 onClick={async () => {
                   const text = newItemText.trim() || "Nueva tarea";
                   const newItem: ChecklistItem = { id: crypto.randomUUID(), text, completed: false };
-                  const newChecklist = [...note.checklist, newItem];
+                  const newChecklist = sortChecklistByCompletion([...note.checklist, newItem]);
                   updateNote(noteId, { checklist: newChecklist });
                   setNewItemText("");
                   setSheetTaskId(newItem.id);

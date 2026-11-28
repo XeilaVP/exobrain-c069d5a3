@@ -37,6 +37,8 @@ export interface Note {
   isCollapsed: boolean;
   icon?: string | null;
   isFavorite?: boolean;
+  /** Visible como nodo en el Árbol (por defecto sí). */
+  inTree?: boolean;
   inTasks?: boolean;
   inPostits?: boolean;
   inCalendar?: boolean;
