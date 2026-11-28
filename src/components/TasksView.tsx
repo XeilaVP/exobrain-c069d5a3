@@ -46,7 +46,7 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
                 </div>}
               </header>
               {isOpen && <div className="px-2 py-2">
-                <NoteChecklist noteId={e.note.id} mobile={mobile} rootId={e.kind === "subtask" ? e.item.id : undefined}
+                <NoteChecklist compact noteId={e.note.id} mobile={mobile} rootId={e.kind === "subtask" ? e.item.id : undefined}
                   onOpenItem={id => onOpenNote(e.note.id, id)} />
               </div>}
             </article>

@@ -160,7 +160,7 @@ export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtask
 
 
 /** Lista de tareas de una nota. Se usa igual dentro de la nota y embebida en Tasks. */
-export const NoteChecklist = ({ noteId, mobile, onOpenItem, onAddWithDetails, rootId }: { noteId: string; mobile: boolean; onOpenItem: (itemId: string) => void; onAddWithDetails?: (itemId: string) => void; rootId?: string }) => {
+export const NoteChecklist = ({ noteId, mobile, onOpenItem, onAddWithDetails, rootId, compact = false }: { noteId: string; mobile: boolean; onOpenItem: (itemId: string) => void; onAddWithDetails?: (itemId: string) => void; rootId?: string; compact?: boolean }) => {
   const { notes, updateNote, addChecklistItem } = useNotes();
   const note = notes.find(n => n.id === noteId);
   const [newItemText, setNewItemText] = useState("");
@@ -221,7 +221,7 @@ export const NoteChecklist = ({ noteId, mobile, onOpenItem, onAddWithDetails, ro
                     {drop === "before" && <span aria-hidden className="pointer-events-none absolute -top-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
                     {drop === "after" && <span aria-hidden className="pointer-events-none absolute -bottom-[3px] left-0 right-0 h-[3px] rounded-full bg-primary" />}
                     {drop === "inside" && <CornerDownRight aria-hidden size={14} className="pointer-events-none absolute -left-5 top-1/2 -translate-y-1/2 text-primary" />}
-                    <PostItChecklistItem item={item} noteId={noteId} mobile={isMobile}
+                    <PostItChecklistItem compact={compact} item={item} noteId={noteId} mobile={isMobile}
                       subtaskCount={subCount}
                       onDragHandle={e => startItemDrag(item.id, e)}
                       onOpenSheet={() => onOpenItem(item.id)} />
