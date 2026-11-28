@@ -1,16 +1,17 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, ListChecks, SquareArrowOutUpRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ListChecks, Clock, Flag } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { useNotes } from "@/contexts/NotesContext";
 import { Button } from "@/components/ui/button";
 import { prioritizedEntries } from "@/lib/taskLevels";
 import { destinationForEntry, initialExpandedEntries } from "@/lib/taskNavigation";
-import TaskMetaControls from "@/components/TaskMetaControls";
 import { NoteChecklist, PostItChecklistItem } from "@/components/NotePostIt";
 
 interface TasksViewProps { onOpenNote: (id: string, subtaskId?: string) => void; }
 /** Tasks embebe las mismas listas de las notas añadidas: mismas filas, mismas funciones. */
 const TasksView = ({ onOpenNote }: TasksViewProps) => {
-  const { notes, updateNote, setViewMembership } = useNotes();
+  const { notes } = useNotes();
   const entries = useMemo(() => prioritizedEntries(notes), [notes]);
   const [expanded, setExpanded] = useState<Set<string>>(initialExpandedEntries);
   const mobile = typeof window !== "undefined" && window.innerWidth < 768;
@@ -32,20 +33,16 @@ const TasksView = ({ onOpenNote }: TasksViewProps) => {
             const chevron = <Button variant="ghost" size="icon" className="shrink-0" aria-expanded={isOpen} aria-label={`${isOpen ? "Plegar" : "Desplegar"} ${e.kind === "task" ? e.note.title : e.item.text}`} onClick={() => toggle(key)}>{isOpen ? <ChevronDown /> : <ChevronRight />}</Button>;
             return (
             <article key={key} className="rounded-lg border border-border bg-card shadow-soft">
-              <header className="flex items-center gap-1 border-b border-border px-2 py-1.5">
+              <header className="flex items-start gap-1 border-b border-border px-2 py-1.5">
                 {chevron}
-                {e.kind === "task" ? <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
-                  <Button variant="ghost" onClick={() => onOpenNote(destination.noteId, destination.subtaskId)} className="h-auto min-h-9 min-w-0 flex-[1_1_auto] justify-start gap-1 whitespace-normal px-1.5 text-left font-display font-semibold hover:text-primary">
-                    <ListChecks className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="break-words">{e.note.title}</span>
-                    <SquareArrowOutUpRight className="h-3.5 w-3.5 shrink-0" />
-                  </Button>
-                  <div className="shrink-0"><TaskMetaControls
-                    dueAt={e.note.calendarAt} hasTime={e.note.calendarHasTime} priority={e.note.priority}
-                    onDateChange={(calendarAt, calendarHasTime) => setViewMembership(e.note.id, { calendarAt, calendarHasTime, inCalendar: !!calendarAt })}
-                    onPriorityChange={(priority) => updateNote(e.note.id, { priority })} /></div>
+                {e.kind === "task" ? <div className="flex min-w-0 flex-1 items-start gap-2 py-1.5">
+                  <button onClick={() => onOpenNote(destination.noteId, destination.subtaskId)} className="min-w-0 flex-1 text-left hover:text-primary">
+                    <span className="block break-words font-display font-semibold leading-snug">{e.note.title}</span>
+                    {e.note.calendarAt && <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><Clock className="h-3.5 w-3.5" />{format(new Date(e.note.calendarAt), e.note.calendarHasTime ? "EEE, d MMM, HH:mm" : "EEE, d MMM", { locale: es })}</span>}
+                  </button>
+                  {e.note.priority && <Flag aria-label="Prioridad" className={`priority-${e.note.priority} mt-0.5 h-4 w-4 shrink-0`} />}
                 </div> : <div className="min-w-0 flex-1">
-                  <PostItChecklistItem item={e.item} noteId={e.note.id} mobile={mobile} onOpenSheet={() => onOpenNote(e.note.id, e.item.id)} />
+                  <PostItChecklistItem compact item={e.item} noteId={e.note.id} mobile={mobile} onOpenSheet={() => onOpenNote(e.note.id, e.item.id)} />
                 </div>}
               </header>
               {isOpen && <div className="px-2 py-2">

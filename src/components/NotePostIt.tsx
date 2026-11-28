@@ -1,7 +1,7 @@
 import { toggleAndSort } from "@/lib/checklistOrder";
 import { useNotes } from "@/contexts/NotesContext";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, SquareArrowOutUpRight, Move, Palette, Heart } from "lucide-react";
+import { X, Plus, Trash2, CheckSquare, Square, ChevronRight, ArrowLeft, Link2, Unlink, FileText, ArrowUp, GripVertical, Copy, Paperclip, Download, File, Type, ListChecks, Maximize2, Minimize2, CornerDownRight, Check, Calendar as CalendarIcon, MoreHorizontal, Dot, SquareArrowOutUpRight, Move, Palette, Heart, Clock, Flag } from "lucide-react";
 
 import { useNoteAttachments } from "@/hooks/useNoteAttachments";
 import { motion } from "framer-motion";
@@ -34,6 +34,8 @@ interface PostItChecklistItemProps {
   onOpenSheet?: () => void;
   subtaskCount?: number;
   onDragHandle?: (e: React.PointerEvent) => void;
+  /** Fila resumida (Tasks): sin arrastre ni papelera; fecha como texto, prioridad solo icono. */
+  compact?: boolean;
 }
 
 const dueLabel = (iso: string, hasTime?: boolean) => {
@@ -44,7 +46,7 @@ const dueLabel = (iso: string, hasTime?: boolean) => {
 };
 
 /** Fila única de tarea/subtarea/item: la misma en la nota y en Tasks. */
-export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0, onDragHandle }: PostItChecklistItemProps) => {
+export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtaskCount = 0, onDragHandle, compact = false }: PostItChecklistItemProps) => {
   const { toggleChecklistItem, deleteChecklistItem, updateNote, notes } = useNotes();
   const containing = () => notes.find(note => note.id === noteId);
   const patchSelf = (patch: Partial<ChecklistItem>) => {
@@ -104,6 +106,20 @@ export const PostItChecklistItem = ({ item, noteId, mobile, onOpenSheet, subtask
     >{item.text || <span className="italic text-muted-foreground/60">Sin título</span>}
       {subtaskCount > 0 && <span className="ml-1.5 inline-flex items-center gap-0.5 align-middle text-[11px] text-muted-foreground"><CornerDownRight size={11} />{subtaskCount}</span>}
     </span>
+  );
+
+  if (compact) return (
+    <div data-task-row className="flex items-start gap-x-1.5 px-1 py-1">
+      <button onClick={() => toggleChecklistItem(noteId, item.id)} aria-label={item.completed ? "Marcar como pendiente" : "Marcar como completada"}
+        className={`text-primary shrink-0 flex items-center justify-center ${hit}`}>
+        {item.completed ? <CheckSquare size={icon} /> : <Square size={icon} />}
+      </button>
+      <button onClick={() => onOpenSheet?.()} className={`min-w-0 flex-1 text-left py-1 ${mobile ? "text-[15px]" : "text-sm"}`}>
+        <span className={`block break-words leading-snug ${item.completed ? "line-through text-muted-foreground" : "text-foreground"}`}>{item.text || "Sin título"}</span>
+        {item.dueAt && <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground"><Clock size={13} />{dueLabel(item.dueAt, item.hasTime)}</span>}
+      </button>
+      {item.priority && <Flag aria-label="Prioridad" size={16} className={`priority-${item.priority} mt-2 shrink-0`} />}
+    </div>
   );
 
   return (
